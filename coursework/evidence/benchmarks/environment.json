@@ -1,0 +1,39 @@
+{
+  "captured_at_utc": "2026-09-10T00:02:44.691634+00:00",
+  "command": "work\\benchmarks\\benchmark_lag_state.py --output-dir work\\benchmarks\\run --rows 1000,5000,10000 --lags 1,8,64 --chunks 1,4,16 --repeats 2 --seed 20260910",
+  "cwd": "C:\\Users\\79261\\Documents\\Codex\\2026-09-10\\re",
+  "repo": "C:\\Users\\79261\\Documents\\Codex\\2026-09-10\\re\\outputs\\ClickHouse",
+  "git_head": "4d7f75efa83c3d81dff96373ce9874e2864c4e23",
+  "python": "3.12.6 (tags/v3.12.6:a4a2d2b, Sep  6 2024, 20:11:23) [MSC v.1940 64 bit (AMD64)]",
+  "python_executable": "C:\\Users\\79261\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "machine": "AMD64",
+  "processor": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+  "cpu_count": 20,
+  "implementation": "CPython",
+  "parameters": {
+    "rows": [
+      1000,
+      5000,
+      10000
+    ],
+    "keys": 128,
+    "lags": [
+      1,
+      8,
+      64
+    ],
+    "chunks": [
+      1,
+      4,
+      16
+    ],
+    "lag_for_add": 64,
+    "repeats": 2,
+    "seed": 20260910,
+    "partitions": [
+      "contiguous",
+      "interleaved"
+    ]
+  }
+}

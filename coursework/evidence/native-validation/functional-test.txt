@@ -1,0 +1,10 @@
+Using queries from 'tests/queries' directory
+Connecting to ClickHouse server... OK
+Connected to server 26.9.1.1 @ 4d7f75efa83c3d81dff96373ce9874e2864c4e23 @ HEAD
+build_flags=['debug', 'use_glibc_compatibility', 'use_snappy', 'use_ssl', 'use_filelog', 'cpu-x86_64'] collect_per_test_coverage=False coverage_active=False
+Found 1 parallel tests and 0 sequential tests
+Running about 1 stateless tests (Process-3).
+[1 / 1] 05161_time_series_diagnostics:                                          [ OK ] 0.44 sec.
+
+1 tests passed. 0 tests skipped. 0.48 s elapsed (Process-3).
+All tests have finished.

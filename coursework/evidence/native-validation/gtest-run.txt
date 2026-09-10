@@ -1,0 +1,39 @@
+Note: Google Test filter = TimeSeriesDiagnosticsState.*
+[==========] Running 15 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 15 tests from TimeSeriesDiagnosticsState
+[ RUN      ] TimeSeriesDiagnosticsState.ArbitraryAddOrderIsCanonicalized
+[       OK ] TimeSeriesDiagnosticsState.ArbitraryAddOrderIsCanonicalized (0 ms)
+[ RUN      ] TimeSeriesDiagnosticsState.MergeTreeAndInterleavingAreCanonical
+[       OK ] TimeSeriesDiagnosticsState.MergeTreeAndInterleavingAreCanonical (0 ms)
+[ RUN      ] TimeSeriesDiagnosticsState.DuplicateTimestampsAreRejectedWithinAndAcrossStates
+[       OK ] TimeSeriesDiagnosticsState.DuplicateTimestampsAreRejectedWithinAndAcrossStates (0 ms)
+[ RUN      ] TimeSeriesDiagnosticsState.SampleCapsApplyToAddsAndMerges
+[       OK ] TimeSeriesDiagnosticsState.SampleCapsApplyToAddsAndMerges (0 ms)
+[ RUN      ] TimeSeriesDiagnosticsState.SerializationRoundTripCanonicalizesAndPreservesStatistics
+[       OK ] TimeSeriesDiagnosticsState.SerializationRoundTripCanonicalizesAndPreservesStatistics (0 ms)
+[ RUN      ] TimeSeriesDiagnosticsState.CorruptVersionCountOrderAndNonFinitePayloadsAreRejected
+[       OK ] TimeSeriesDiagnosticsState.CorruptVersionCountOrderAndNonFinitePayloadsAreRejected (0 ms)
+[ RUN      ] TimeSeriesDiagnosticsState.CorruptCapsAndTruncatedPayloadsAreRejected
+[       OK ] TimeSeriesDiagnosticsState.CorruptCapsAndTruncatedPayloadsAreRejected (0 ms)
+[ RUN      ] TimeSeriesDiagnosticsState.DeserializationCrossesBoundedInitialReserve
+[       OK ] TimeSeriesDiagnosticsState.DeserializationCrossesBoundedInitialReserve (1 ms)
+[ RUN      ] TimeSeriesDiagnosticsState.NonFiniteValuesAreRejectedOnAdd
+[       OK ] TimeSeriesDiagnosticsState.NonFiniteValuesAreRejectedOnAdd (0 ms)
+[ RUN      ] TimeSeriesDiagnosticsState.AutocorrelationLagZeroTinyAndConstantSeries
+[       OK ] TimeSeriesDiagnosticsState.AutocorrelationLagZeroTinyAndConstantSeries (0 ms)
+[ RUN      ] TimeSeriesDiagnosticsState.AutocorrelationHandlesExtremeValueScales
+[       OK ] TimeSeriesDiagnosticsState.AutocorrelationHandlesExtremeValueScales (0 ms)
+[ RUN      ] TimeSeriesDiagnosticsState.AutocorrelationHandlesLargeValueOffset
+[       OK ] TimeSeriesDiagnosticsState.AutocorrelationHandlesLargeValueOffset (0 ms)
+[ RUN      ] TimeSeriesDiagnosticsState.LargeOffsetRetainsRepresentableVariation
+[       OK ] TimeSeriesDiagnosticsState.LargeOffsetRetainsRepresentableVariation (0 ms)
+[ RUN      ] TimeSeriesDiagnosticsState.LjungBoxStatisticUsesRequestedLags
+[       OK ] TimeSeriesDiagnosticsState.LjungBoxStatisticUsesRequestedLags (0 ms)
+[ RUN      ] TimeSeriesDiagnosticsState.DurbinWatsonUsesTimestampOrder
+[       OK ] TimeSeriesDiagnosticsState.DurbinWatsonUsesTimestampOrder (0 ms)
+[----------] 15 tests from TimeSeriesDiagnosticsState (5 ms total)
+
+[----------] Global test environment tear-down
+[==========] 15 tests from 1 test suite ran. (9 ms total)
+[  PASSED  ] 15 tests.

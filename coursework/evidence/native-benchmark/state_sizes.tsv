@@ -1,0 +1,4 @@
+parts	input_rows	state_rows	serialized_bytes	elapsed_seconds	max_rss_kb	rows_per_second
+1	50000	1	800018	0.06	163040	833333.333
+4	50000	4	800072	0.05	164320	1000000.000
+16	50000	16	800288	0.06	163680	833333.333

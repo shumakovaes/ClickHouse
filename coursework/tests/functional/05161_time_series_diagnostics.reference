@@ -1,0 +1,44 @@
+--- preview gate and call-shape validation ---
+--- exact outputs, lag zero, and named Ljung-Box tuple ---
+1	0.25	-0.3	-0.45
+0.1
+1.58	0.453845
+Float64	Float64	1.58	0.208761
+--- insufficient, constant, and zero-denominator results ---
+1	1	1
+1	1	1	0
+0	1	1
+1	1
+1
+--- arbitrary input order and final allowed scalar types ---
+0.4
+0.1
+0.1
+0.25
+0.1
+--- non-finite values are rejected; Null combinator skips NULL rows ---
+Nullable(Float64)	-0.5
+Nullable(Float64)	0.2
+Nullable(Float64)	1
+--- parameter validation and state-size caps ---
+1
+0.2
+1.58	0.453845
+--- large-offset and extreme-scale numeric stability ---
+0.4
+-0.75	3
+-0.75	3
+--- Distributed engine shard-state merge and duplicate propagation ---
+0.25	0.1
+--- interleaved, reversed, and overlapping state merges ---
+0.5
+2.439184	0.118338
+0.054945
+1
+--- duplicate timestamps are rejected in one state and across states ---
+--- serialized states and AggregatingMergeTree part merges ---
+1
+1
+0.25
+0.054945
+0	0.054945

@@ -1,0 +1,21 @@
+{
+  "command": "py work/experiments/run_experiments.py --n 300 --reps 200 --seed 20260910 --output-dir work/experiments/results",
+  "seed": 20260910,
+  "n": 300,
+  "reps": 200,
+  "python": "3.12.6",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "architecture": "AMD64",
+  "cpu": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+  "cpu_count": 20,
+  "packages": {
+    "numpy": "2.1.2",
+    "scipy": null,
+    "matplotlib": "3.9.2"
+  },
+  "scipy_available": false,
+  "p_value_provenance": {
+    "ljung_box": "Wilson-Hilferty chi-square survival approximation; SciPy was unavailable",
+    "kpss": "Interpolation over standard published asymptotic critical values; KPSS null distribution is non-standard"
+  }
+}
