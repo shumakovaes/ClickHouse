@@ -1,0 +1,13 @@
+case,extension,input_rows,outcome,usable_rows
+null_rows_skipped,lagged_regression,7,value,5
+null_rows_skipped,adf,7,undefined,5
+null_rows_skipped,kpss_level,7,value,5
+null_rows_skipped,mean_shift_native_contract,7,value,5
+short,lagged_regression,2,undefined,2
+short,adf,2,undefined,2
+short,kpss_level,2,value,2
+short,mean_shift_native_contract,2,value,2
+constant,lagged_regression,12,undefined,12
+constant,adf,12,undefined,12
+constant,kpss_level,12,nan,12
+constant,mean_shift_native_contract,12,split_0,12

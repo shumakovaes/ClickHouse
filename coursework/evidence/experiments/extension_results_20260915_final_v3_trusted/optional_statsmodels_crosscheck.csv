@@ -1,0 +1,2 @@
+adf_statistic_difference,ar_intercept_difference,ar_phi1_difference,ar_phi2_difference,available,kpss_statistic_difference,label
+-5.329070518200751e-15,0.0,-1.6653345369377348e-16,3.0531133177191805e-16,True,-1.3877787807814457e-17,optional_statsmodels_crosscheck

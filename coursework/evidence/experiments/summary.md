@@ -1,8 +1,16 @@
-# Synthetic time-series diagnostics
+# Archived baseline synthetic time-series diagnostics
 
 Seed `20260910`, n=`300`, repeated simulations=`200`.
 
-Scope: the three implemented core diagnostics are ACF, Ljung–Box, and Durbin–Watson. The AR(1) fit/forecast and KPSS sections are exploratory/future-extension outputs and should not be treated as part of the three-diagnostic result. The single-run table is one draw per process. Rejection rates are empirical proportions from independent draws; they are not theoretical probabilities.
+This is archived baseline exploratory evidence predating the four registered
+extensions (`timeSeriesLaggedLinearRegression`, `timeSeriesADFStatistic`,
+`timeSeriesKPSSTest`, and `timeSeriesMeanShiftChangePoint`). The three baseline
+diagnostics are ACF, Ljung–Box, and Durbin–Watson. The AR(1) fit/forecast and
+KPSS sections are historical exploratory outputs and should not be treated as
+part of the three-diagnostic result or as evidence for the registered
+extensions. The single-run table is one draw per process. Rejection rates are
+empirical proportions from independent draws; they are not theoretical
+probabilities.
 
 P-value provenance: SciPy was unavailable in this run, so Ljung–Box p-values use the Wilson–Hilferty chi-square survival approximation. KPSS p-values use interpolation over standard published asymptotic critical values because its null distribution is non-standard. See `environment.json` for the full runtime record.
 

@@ -1,0 +1,76 @@
+-- Tags: stateful
+-- Persistence coverage for all four statistical extension aggregate states.
+
+SET enable_time_series_aggregate_functions = 1;
+SET max_threads = 1;
+SET max_block_size = 2;
+
+DROP TABLE IF EXISTS time_series_statistical_extensions_mt;
+CREATE TABLE time_series_statistical_extensions_mt
+(
+    series UInt8,
+    regression AggregateFunction(timeSeriesLaggedLinearRegression(1), UInt64, Float64),
+    adf AggregateFunction(timeSeriesADFStatistic(0, 'constant'), UInt64, Float64),
+    kpss AggregateFunction(timeSeriesKPSSTest('level', 0), UInt64, Float64),
+    change_point AggregateFunction(timeSeriesMeanShiftChangePoint(2), UInt64, Float64)
+)
+ENGINE = AggregatingMergeTree
+ORDER BY series;
+
+-- Separate inserts create separate parts; the odd/even timestamps are interleaved.
+SYSTEM STOP MERGES time_series_statistical_extensions_mt;
+INSERT INTO time_series_statistical_extensions_mt
+SELECT 0,
+       timeSeriesLaggedLinearRegressionState(1)(key, value),
+       timeSeriesADFStatisticState(0, 'constant')(key, value),
+       timeSeriesKPSSTestState('level', 0)(key, value),
+       timeSeriesMeanShiftChangePointState(2)(key, value)
+FROM values('key UInt64, value Float64',
+    (0, 1.), (2, 4.), (4, 16.));
+INSERT INTO time_series_statistical_extensions_mt
+SELECT 0,
+       timeSeriesLaggedLinearRegressionState(1)(key, value),
+       timeSeriesADFStatisticState(0, 'constant')(key, value),
+       timeSeriesKPSSTestState('level', 0)(key, value),
+       timeSeriesMeanShiftChangePointState(2)(key, value)
+FROM values('key UInt64, value Float64',
+    (1, 2.), (3, 8.), (5, 32.));
+
+SELECT '--- unmerged parts and merged aggregate states ---';
+SELECT count() FROM time_series_statistical_extensions_mt;
+SELECT
+    timeSeriesLaggedLinearRegressionMerge(1)(regression) = (SELECT timeSeriesLaggedLinearRegression(1)(key, value) FROM values('key UInt64, value Float64', (0, 1.), (1, 2.), (2, 4.), (3, 8.), (4, 16.), (5, 32.))),
+    timeSeriesADFStatisticMerge(0, 'constant')(adf) = (SELECT timeSeriesADFStatistic(0, 'constant')(key, value) FROM values('key UInt64, value Float64', (0, 1.), (1, 2.), (2, 4.), (3, 8.), (4, 16.), (5, 32.))),
+    timeSeriesKPSSTestMerge('level', 0)(kpss) = (SELECT timeSeriesKPSSTest('level', 0)(key, value) FROM values('key UInt64, value Float64', (0, 1.), (1, 2.), (2, 4.), (3, 8.), (4, 16.), (5, 32.))),
+    timeSeriesMeanShiftChangePointMerge(2)(change_point) = (SELECT timeSeriesMeanShiftChangePoint(2)(key, value) FROM values('key UInt64, value Float64', (0, 1.), (1, 2.), (2, 4.), (3, 8.), (4, 16.), (5, 32.)))
+FROM time_series_statistical_extensions_mt;
+
+SYSTEM START MERGES time_series_statistical_extensions_mt;
+OPTIMIZE TABLE time_series_statistical_extensions_mt FINAL;
+SELECT count() FROM time_series_statistical_extensions_mt;
+SELECT
+    finalizeAggregation(regression) = (SELECT timeSeriesLaggedLinearRegression(1)(key, value) FROM values('key UInt64, value Float64', (0, 1.), (1, 2.), (2, 4.), (3, 8.), (4, 16.), (5, 32.))),
+    finalizeAggregation(adf) = (SELECT timeSeriesADFStatistic(0, 'constant')(key, value) FROM values('key UInt64, value Float64', (0, 1.), (1, 2.), (2, 4.), (3, 8.), (4, 16.), (5, 32.))),
+    finalizeAggregation(kpss) = (SELECT timeSeriesKPSSTest('level', 0)(key, value) FROM values('key UInt64, value Float64', (0, 1.), (1, 2.), (2, 4.), (3, 8.), (4, 16.), (5, 32.))),
+    finalizeAggregation(change_point) = (SELECT timeSeriesMeanShiftChangePoint(2)(key, value) FROM values('key UInt64, value Float64', (0, 1.), (1, 2.), (2, 4.), (3, 8.), (4, 16.), (5, 32.)))
+FROM time_series_statistical_extensions_mt;
+
+DROP TABLE time_series_statistical_extensions_mt;
+
+DROP TABLE IF EXISTS time_series_statistical_extensions_duplicate_mt;
+CREATE TABLE time_series_statistical_extensions_duplicate_mt
+(
+    series UInt8,
+    state AggregateFunction(timeSeriesLaggedLinearRegression(1), UInt64, Float64)
+)
+ENGINE = AggregatingMergeTree
+ORDER BY series;
+INSERT INTO time_series_statistical_extensions_duplicate_mt
+SELECT 0, timeSeriesLaggedLinearRegressionState(1)(key, value)
+FROM values('key UInt64, value Float64', (0, 1.), (2, 4.));
+INSERT INTO time_series_statistical_extensions_duplicate_mt
+SELECT 0, timeSeriesLaggedLinearRegressionState(1)(key, value)
+FROM values('key UInt64, value Float64', (2, 4.), (4, 16.));
+SELECT timeSeriesLaggedLinearRegressionMerge(1)(state)
+FROM time_series_statistical_extensions_duplicate_mt; -- { serverError BAD_ARGUMENTS }
+DROP TABLE time_series_statistical_extensions_duplicate_mt;

@@ -1,62 +1,88 @@
 # Mergeability and state contracts
 
-## Production state
+## Exact keyed state
 
-All three supported functions use the same exact store-sort keyed state. A
-state retains every accepted `(key, Float64 value)` sample, plus serialization
-version and `max_samples`; it canonicalizes by key before finalization, merge,
-or serialization. The state size is `O(n)` records for `n` samples. This is
-deliberately not a compact range monoid: retaining only boundaries cannot
-reproduce lagged pairs for arbitrary interleavings.
+`timeSeriesLaggedLinearRegression`, `timeSeriesADFStatistic`,
+`timeSeriesKPSSTest`, and `timeSeriesMeanShiftChangePoint` all use the same
+lossless keyed state as the baseline diagnostics. It retains every finite
+`(timestamp, Float64 value)` row in `O(n)` space, plus a version and function
+configuration. It is deliberately not a compact range monoid: boundaries
+alone cannot recover positional lag pairs or interior change-point candidates
+after arbitrary interleaving.
 
-## Add, merge, finalize
+The configured `max_samples` is positive, defaults to 1,000,000, and cannot
+exceed 10,000,000. A cap violation is an error. Nullable rows are skipped by
+the standard ClickHouse combinator; non-finite values and duplicate keys are
+rejected.
 
-`add(S, key, value)` rejects non-finite values, duplicate keys, invalid
-parameters, and a count that would exceed `max_samples`. The current
-implementation appends records in `O(1)` amortized time and pays `O(n log n)`
-to canonicalize an out-of-order state; the observable result is independent of
-arrival order.
+## Add, canonicalization, and merge
 
-`merge(S1, S2)` requires matching function parameters, format/version, and
-`max_samples`. The two sorted vectors are merged in `O(n1+n2)` time and space;
-an equal key is rejected, including a duplicate split across states. Thus
-`merge` is commutative and associative as a semantic operation, with the usual
-floating-point tolerance caveat. `merge(S, empty) = S`.
+`add(S, timestamp, value)` appends in arrival order and records whether the
+vector is out of order. Canonicalization sorts by timestamp and validates
+strictly increasing keys. It occurs before finalization, merge, and
+serialization, so all four extensions see one canonical positional series.
 
-`finalize(S)` scans the canonical key order. The formulas are:
+`merge(S1, S2)` requires matching extension kind, parameters, state version,
+and `max_samples`. It canonicalizes each input, then uses a two-pointer
+linear merge. Equal timestamps are a duplicate-key error, including when the
+duplicate is split between states; no arrival-order tie break exists. The
+empty state is the identity and the merged count must remain within the cap.
 
-```text
-rho_h = sum(i=h..n-1) (x_i-mean)(x_{i-h}-mean) / sum(i=0..n-1)(x_i-mean)^2
-Q     = n(n+2) * sum(h=1..max_lag) rho_h^2/(n-h)
-DW    = sum(i=1..n-1)(x_i-x_{i-1})^2 / sum(i=0..n-1)x_i^2
-```
+For disjoint key sets, this operation is semantically commutative and
+associative: every valid merge tree yields the same strictly increasing keyed
+record vector. That makes arbitrary block, shard, retry, and persisted-state
+interleavings safe. Final floating-point reductions are deterministic in their
+canonical input order but are not promised bitwise identical across different
+execution paths; comparisons use the documented numerical tolerance. A
+duplicate or malformed state must fail regardless of merge-tree shape.
 
-`timeSeriesAutocorrelation(0)` returns `1` for a non-constant series and `NaN`
-for an empty or constant series. `timeSeriesLjungBoxTest` returns `(Q,
-chi-square survival probability)` with
-`max_lag-model_df` degrees of freedom. Undefined cases return `NaN` as stated
-in `DESIGN.md`.
+Serialized state has a versioned extension envelope followed by the versioned
+canonical keyed payload. Deserialization validates the expected kind and
+parameters, cap, count, finite values, and strict key order before accepting
+bytes. A version or parameter mismatch is incompatible, not a request to
+reinterpret the payload.
+
+## Positional semantics and finalizers
+
+Timestamp order supplies only a canonical ordering key. Once sorted, all
+lags, ADF differences and trend, KPSS trend and residual path, and
+change-point splits use consecutive positions `0..n-1`; numeric timestamp
+gaps are ignored. This is equal spacing in the positional model, not a claim
+that elapsed time is equally spaced. Resample first when elapsed-time spacing
+is required.
+
+The four finalizers have these merge-safe boundaries:
+
+| Extension | Finalization and undefined-result policy |
+|---|---|
+| `timeSeriesLaggedLinearRegression` | Fixed positional order `1..16`; centered/scaled Givens QR. Insufficient, rank-deficient, ill-conditioned, non-finite, or over-budget fits return NaN fields. |
+| `timeSeriesADFStatistic` | Fixed augmentation lag `0..16` and `none`/`constant`/`trend`; returns coefficient, t-statistic, and usable observation count, but no p-value or autolag. |
+| `timeSeriesKPSSTest` | `level`/`trend`; explicit or function-local Bartlett bandwidth, bounded at 1024; returns statistic, chosen bandwidth, and `n`, but no p-value. |
+| `timeSeriesMeanShiftChangePoint` | One positional split, `O(n)` scan with transient suffix states; descriptive relative SSE score, earliest numerically tied split, and zero/NaNs when no improvement is identifiable. |
 
 ## Complexity
 
-For `n` retained samples and `H = max_lag`, state memory and serialization are
-`O(n)`. The implementation appends in `O(1)` amortized time and sorts an
-out-of-order state in `O(n log n)` when canonicalization is required; two-state
-merge is `O(n1+n2)` time and temporary space. Durbin--Watson and one
-autocorrelation finalize in `O(n)`. Ljung--Box finalize is `O(nH)` in the
-implementation because each requested lag is evaluated from the stored samples.
+For `n` retained records, state memory and serialization are `O(n)`.
+Appending is amortized `O(1)`. Sorting an out-of-order state costs
+`O(n log n)`; merging canonical states costs `O(n1 + n2)` time and temporary
+space. Lagged regression and ADF finalization additionally perform bounded
+small-matrix QR work. KPSS finalization is `O(n * bandwidth)` with an
+explicit checked work limit. Mean-shift finalization is `O(n)` time and
+`O(n)` transient suffix memory.
 
-## State compatibility and wire safety
+## Compact ordered-range state: ADR-002 NO-GO
 
-Serialized state starts with an explicit format version and carries
-`max_samples`, count, then records. Deserialization must check version, cap,
-count, finite values, and strictly increasing keys before allocation. A state
-whose serialized `max_samples` differs from the receiving function's parameter
-is incompatible and must fail; bytes must never be silently reinterpreted.
+The compact state is not an alternative implementation of this merge
+contract. It is a NO-GO for an ordinary `IAggregateFunction`, because a
+generic reducer may merge disjoint ranges before a later range fills the
+interior (`1, 3, 2`). Rejecting that particular pair is not sufficient: a
+valid complete input could fail solely because the engine selected that merge
+tree.
 
-## Rejected compact range result
-
-The compact range state is retained only as a rejected negative result. It can
-be correct for pre-ordered adjacent ranges with a carefully specified boundary
-policy, but it is not correct for arbitrary input or merge order. It is not part
-of the production API, registration, or coverage pass.
+Compact state is acceptable only as a planner/operator-owned feature with a
+provable contiguous canonical range contract: every child must own a dense
+interval, the coordinator must merge only adjacent intervals in canonical
+order, and the same guarantee must hold for remote, retry, spill, two-level,
+and persisted paths. Until such an operator exists, do not expose compact
+`-State`/`-Merge` behavior or `AggregatingMergeTree` semantics. The exact
+keyed store-and-sort state is the only ordinary aggregate contract.

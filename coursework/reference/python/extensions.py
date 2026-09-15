@@ -99,7 +99,11 @@ def adf_statistic(values: Iterable[float], p: int, deterministic: str = "constan
         raise ValueError("p must be a non-negative integer")
     if deterministic not in {"none", "constant", "trend"}:
         raise ValueError("deterministic must be none, constant, or trend")
-    if len(y) <= p + 4:
+    # Match statsmodels' fixed-lag feasibility guard: n >= 2*p + 2 for no
+    # deterministic terms, then two additional observations per deterministic
+    # column (constant or constant+trend).
+    deterministic_columns = {"none": 0, "constant": 1, "trend": 2}[deterministic]
+    if len(y) < 2 * p + 2 + 2 * deterministic_columns:
         raise ValueError("too few observations for ADF")
     dy = tuple(y[i] - y[i - 1] for i in range(1, len(y)))
     rows, target = [], []
@@ -121,8 +125,13 @@ class KPSSResult:
     bandwidth: int
 
 
-def kpss_test(values: Iterable[float], regression: str = "level", bandwidth: int | str = "legacy") -> KPSSResult:
-    """KPSS statistic using Bartlett HAC; ``regression`` is level or trend."""
+def kpss_test(values: Iterable[float], regression: str = "level", bandwidth: int | str = "default", *, q: int | None = None) -> KPSSResult:
+    """KPSS statistic using Bartlett HAC; default q is a documented floor rule.
+
+    ``q`` is accepted as a keyword alias for ``bandwidth``. The default is
+    ``floor(12*(n/100)**0.25)``, capped at ``n-1``; no external package's
+    legacy mode is implied.
+    """
     y = _values(values)
     n = len(y)
     if n < 2:
@@ -138,12 +147,16 @@ def kpss_test(values: Iterable[float], regression: str = "level", bandwidth: int
     else:
         mean = math.fsum(y) / n
         residuals = tuple(z - mean for z in y)
-    if bandwidth == "legacy":
+    if q is not None:
+        if bandwidth != "default":
+            raise ValueError("specify either q or bandwidth, not both")
+        bandwidth = q
+    if bandwidth == "default":
         bw = min(n - 1, int(math.floor(12.0 * (n / 100.0) ** 0.25)))
     elif isinstance(bandwidth, int) and not isinstance(bandwidth, bool):
         bw = bandwidth
     else:
-        raise ValueError("bandwidth must be an integer or legacy")
+        raise ValueError("bandwidth must be an integer or 'default'")
     if not 0 <= bw < n:
         raise ValueError("bandwidth must be in [0, n-1]")
     lrv = math.fsum(x * x for x in residuals) / n
@@ -158,6 +171,16 @@ def kpss_test(values: Iterable[float], regression: str = "level", bandwidth: int
         partial += x
         ss += partial * partial
     return KPSSResult(ss / (n * n * lrv), bw)
+
+
+def kpss_keyed(points: Iterable[tuple[float, float]], regression: str = "level", q: int | None = None) -> KPSSResult:
+    """Sort unique ``(key, value)`` observations, then apply :func:`kpss_test`."""
+    rows = sorted((float(key), float(value)) for key, value in points)
+    if any(not math.isfinite(k) or not math.isfinite(v) for k, v in rows):
+        raise ValueError("keys and values must be finite")
+    if any(rows[i - 1][0] == rows[i][0] for i in range(1, len(rows))):
+        raise ValueError("duplicate key")
+    return kpss_test((v for _, v in rows), regression, q=q)
 
 
 @dataclass(frozen=True)
@@ -176,16 +199,35 @@ def single_mean_shift_change_point(values: Iterable[float], min_segment: int = 1
         raise ValueError("min_segment must be a positive integer")
     if len(y) < 2 * min_segment:
         raise ValueError("too few observations for requested minimum segment")
-    total_mean = math.fsum(y) / len(y)
-    total_sse = math.fsum((x - total_mean) ** 2 for x in y)
+    # Work in a bounded coordinate system: the selected split and relative
+    # improvement are invariant to nonzero affine scaling, while raw squares
+    # can overflow at 1e200 or underflow at 1e-200.
+    low, high = min(y), max(y)
+    location = low / 2.0 + high / 2.0
+    translated = tuple(x - location for x in y)
+    scale = max((abs(x) for x in translated), default=0.0)
+    if scale == 0.0:
+        return MeanShiftResult(0, math.nan, math.nan, math.nan, math.nan)
+    z = tuple(x / scale for x in translated)
+    total_mean = math.fsum(z) / len(z)
+    total_sse = math.fsum((x - total_mean) ** 2 for x in z)
     best = None
     for k in range(min_segment, len(y) - min_segment + 1):
-        left, right = y[:k], y[k:]
+        left, right = z[:k], z[k:]
         lm, rm = math.fsum(left) / k, math.fsum(right) / (len(y) - k)
         sse = math.fsum((x - lm) ** 2 for x in left) + math.fsum((x - rm) ** 2 for x in right)
         if best is None or sse < best[0]:
             best = (sse, k, lm, rm)
     assert best is not None
     sse, k, lm, rm = best
-    reduction = 0.0 if total_sse == 0.0 else (total_sse - sse) / total_sse
-    return MeanShiftResult(k, lm, rm, sse, reduction)
+    reduction = (total_sse - sse) / total_sse if total_sse else math.nan
+    if not reduction > 0.0:
+        return MeanShiftResult(0, math.nan, math.nan, math.nan, math.nan)
+    # Report the original-scale SSE/means.  Positive overflow is represented
+    # honestly as +inf; the selected split and dimensionless score remain
+    # useful.  Very small representable inputs may analogously underflow SSE
+    # to zero after rescaling.
+    before = location + lm * scale
+    after = location + rm * scale
+    original_sse = sse * scale * scale
+    return MeanShiftResult(k, before, after, original_sse, reduction)

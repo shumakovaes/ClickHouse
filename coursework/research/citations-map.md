@@ -9,6 +9,8 @@
 | Ljung–Box finite-sample improvement and residual lack-of-fit test | `ljungbox1978` |
 | Durbin–Watson first-order residual serial-correlation statistic | `durbinwatson1950`; `durbinwatson1971` |
 | Classical autoregressive lag-equation framework; OLS as lagged regression | `yule1927` |
+| Classical fixed-order Dickey--Fuller/unit-root regression | `dickeyfuller1979`; `saiddickey1984` |
+| Fixed-lag sample-admission guard used by `statsmodels.adfuller` | `statsmodels_adfuller_source` |
 | KPSS stationarity null and long-run variance/LM test | `kpss1992` |
 | HAC/Newey–West covariance estimator | `neweywest1987` |
 | ClickHouse columnar OLAP architecture and MergeTree design | `schulze2024clickhouse` |

@@ -3,14 +3,20 @@
 ## Status and baseline
 
 This continuation starts from commit
-`1a5ee147a53b284f1efc28e97803c3c837a706f3` on the verified
-`coursework/mergeable-time-series-statistics` branch. Work continues on
-`coursework/time-series-extensions`.
+`1a5ee147a53b284f1efc28e97803c3c837a706f3` on the verified baseline branch;
+the active checkout is `coursework/time-series-extensions`.
 
-The baseline registers three private-preview aggregates over the exact keyed
-`O(n)` state: autocorrelation, Ljung--Box, and Durbin--Watson. The state retains
-all finite `(timestamp, Float64(value))` pairs, sorts them by a unique timestamp,
-and therefore merges arbitrary interleaved partial states correctly.
+The baseline comprises exactly three private-preview diagnostic aggregates over
+the exact keyed `O(n)` state: autocorrelation, Ljung--Box, and Durbin--Watson.
+The state retains all finite `(timestamp, Float64(value))` pairs, sorts them by
+a unique timestamp, and therefore merges arbitrary interleaved partial states
+correctly. The four extension implementations and registration are at
+`src/AggregateFunctions/TimeSeries/AggregateFunctionTimeSeriesStatisticalExtensions.{h,cpp}`
+and `src/AggregateFunctions/registerAggregateFunctions.cpp`; their focused
+native tests are at
+`src/AggregateFunctions/tests/gtest_time_series_statistical_extensions.cpp`.
+That source currently defines 22 extension cases; execution and acceptance
+remain pending.
 
 This file is the decision gate for the next four research directions. A method
 is not a native API merely because a Python or standalone C++ prototype exists.
@@ -35,7 +41,7 @@ Unless a function states a stronger precondition:
 | Direction | Native target | State and cost | Decision gate |
 |---|---|---|---|
 | Compact lag state | No ordinary aggregate | `O(L)` only for complete adjacent ordered ranges | Research prototype until an execution operator proves adjacency on every merge path |
-| Lagged linear regression | `timeSeriesLaggedLinearRegression` | Exact keyed rows; `O(n)` state, bounded small-matrix QR at finalize | Register after rank, numerical, merge, SQL, and distributed tests pass |
+| Lagged linear regression | `timeSeriesLaggedLinearRegression` | Exact keyed rows; `O(n)` state, bounded small-matrix QR at finalize | Validation/acceptance after rank, numerical, merge, SQL, and distributed tests pass |
 | ADF | `timeSeriesADFStatistic` | Exact keyed rows; fixed augmentation lag and deterministic mode | Statistic only; no p-value without audited MacKinnon response surfaces |
 | KPSS | `timeSeriesKPSSTest` | Exact keyed rows; Bartlett/Newey--West finalization | No compact claim; explicit asymptotic convention and work cap |
 | Mean-shift change point | `timeSeriesMeanShiftChangePoint` | Exact keyed rows; one-break `O(n)` final scan | Descriptive score only; no uncalibrated p-value or generic multiple-break claim |
@@ -77,9 +83,12 @@ formed only after the full keyed state is sorted, because arbitrary shards can
 interleave. Coefficients are fitted once at finalization; locally fitted
 coefficients are never merged.
 
-The solver must scale and center columns and use a small QR reduction rather
-than raw normal equations. Insufficient, rank-deficient, ill-conditioned, or
-non-finite fits return a fixed-shape NaN result.
+The solver scales and centers columns and uses a small Givens QR reduction
+rather than raw normal equations. The finalizer has a checked
+`rows * columns^2 <= 100000000` work budget. The non-pivoted scaled solve
+rejects a reciprocal condition estimate below `1e-12`. Insufficient,
+rank-deficient, ill-conditioned, or non-finite fits return a fixed-shape NaN
+result.
 
 ## ADF statistic
 
@@ -93,7 +102,11 @@ delta(y[t]) = deterministic_terms + gamma * y[t-1]
 Supported deterministic specifications are none, constant, and constant plus
 linear trend. The trend uses canonical row position, not the numeric timestamp.
 The returned ADF statistic is the t-ratio for `gamma` from the fixed requested
-regression. It is not a Student-t test.
+regression. It is not a Student-t test. Fixed-lag sample admission matches the
+statsmodels rule `p <= floor(n / 2) - deterministic_terms - 1`, followed by a
+positive residual-degrees-of-freedom check. Residual variance below the
+scaled Float64 backward-error floor is reported as unresolved (`NaN`) instead
+of turning QR roundoff into an enormous t-ratio.
 
 The first native scope intentionally omits p-values and automatic lag search.
 Both require additional statistical conventions and would make the result
@@ -103,7 +116,9 @@ conditional on model selection choices not represented by the current API.
 
 The intended modes are level and linear-trend stationarity. Residuals are
 formed after canonical sorting, and the long-run variance uses a Bartlett
-kernel with an explicit or documented legacy bandwidth. The statistic is
+kernel with an explicit bandwidth or the documented function-local floor rule
+`min(n - 1, floor(12 * (n / 100)^0.25))`. This is not called another
+library's legacy mode. The statistic is
 based on the squared cumulative residual path, so a fixed-size commutative
 state is not claimed.
 
@@ -116,13 +131,25 @@ bandwidth and observation count are returned with the statistic.
 
 This is a deliberately restricted one-break estimator, not general change
 point dynamic programming. For each legal split, it minimizes the sum of
-within-segment squared errors and retains the earliest exact tie. The score is
-the fraction of the one-mean total variation removed by the best two-mean fit.
-It is descriptive and is not a p-value.
+within-segment squared errors and retains the earliest reliably distinguishable
+minimum. The native comparison uses
+`gamma_n = n * epsilon / (1 - n * epsilon)` and accepts a later candidate only
+when its SSE improves by more than
+`8 * gamma_n * max(abs(candidate), abs(incumbent))`; this count-aware relative
+envelope treats smaller differences as ties and therefore preserves the
+earliest split. The independent Python batch oracle uses a strict `<` SSE
+comparison, so it also preserves the earliest exact tie but can choose a
+different split for deliberately near-tied objectives. The score is the
+fraction of the one-mean total variation removed by the best two-mean fit. It
+is descriptive and is not a p-value.
 
 The result reports the number of samples in the left segment, the score, both
-segment means, and the best two-segment SSE. A zero split denotes no identifiable
-break. `min_segment` excludes unstable endpoint splits.
+segment means, and the best two-segment SSE. A zero split denotes no
+identifiable improvement. `min_segment` excludes unstable endpoint splits.
+The finalizer builds direct suffix Welford states in `O(n)` transient memory;
+this avoids the catastrophic cancellation caused by reconstructing right-hand
+SSE as a difference of total and prefix moments. Numerically tied objectives
+retain the earliest canonical split.
 
 ## Validation gate for every native API
 

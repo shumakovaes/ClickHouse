@@ -29,9 +29,9 @@ def create_analysis(input_dir: Path, output: Path) -> None:
         else "SciPy was available, so Ljung–Box p-values use SciPy's chi-square survival function"
     )
     with output.open("w", encoding="utf-8") as out:
-        out.write("# Measured results audit\n\n")
-        out.write("These statements describe the generated CSVs, not theoretical guarantees. All rates use the fixed-seed run (`n=300`, `reps=200`, seed `20260910`). A 5% rejection rate is the decision rule (`p < 0.05`).\n\n")
-        out.write("Scope: the three implemented core diagnostics are ACF, Ljung–Box, and Durbin–Watson. AR(1) fit/forecast and KPSS values are exploratory/future-extension outputs, reported separately and not counted as one of the three core diagnostics. The runtime and p-value provenance are recorded in `environment.json`.\n\n")
+        out.write("# Archived baseline measured-results audit\n\n")
+        out.write("This is archived baseline exploratory evidence predating the four registered extensions (`timeSeriesLaggedLinearRegression`, `timeSeriesADFStatistic`, `timeSeriesKPSSTest`, and `timeSeriesMeanShiftChangePoint`). These statements describe the generated CSVs, not theoretical guarantees. All rates use the fixed-seed run (`n=300`, `reps=200`, seed `20260910`). A 5% rejection rate is the decision rule (`p < 0.05`).\n\n")
+        out.write("Scope: the three implemented baseline diagnostics are ACF, Ljung–Box, and Durbin–Watson. AR(1) fit/forecast and KPSS values are archived exploratory outputs from before the four registered extensions, reported separately and not counted as one of the three core diagnostics. The runtime and p-value provenance are recorded in `environment.json`.\n\n")
         out.write("## Formula audit\n\n")
         out.write(f"The ACF uses a demeaned series and the common (biased) denominator `sum(z²)`. Ljung–Box uses `n(n+2) * sum(rho_k²/(n-k))` over the requested lags, with a chi-square survival probability. Durbin–Watson is `sum(diff(x)²)/sum(x²)` for the supplied sequence; here it is descriptive because no residual model is supplied. AR(1) is OLS with an intercept, and the generator uses stationary initialization for |phi|<1. KPSS removes either a level or linear trend and estimates long-run variance with a Bartlett/Newey–West window; its p-values are critical-value interpolations because the KPSS null distribution is non-standard. {lb_provenance}; this is recorded in `environment.json`.\n\n")
         out.write("## False-positive and detection rates\n\n")
@@ -40,7 +40,7 @@ def create_analysis(input_dir: Path, output: Path) -> None:
         for r in repeat:
             out.write(f"| {r['process']} | {float(r['ljung_box_rejection_rate_5pct']):.3f} | {float(r['kpss_level_rejection_rate_5pct']):.3f} | {float(r['kpss_trend_rejection_rate_5pct']):.3f} |\n")
         out.write(f"\nThe measured Ljung–Box false-positive rate is {float(by_kind['white_noise']['ljung_box_rejection_rate_5pct']):.3f} (white noise), with detection {float(by_kind['ar1_phi_0.5']['ljung_box_rejection_rate_5pct']):.3f} and {float(by_kind['ar1_phi_0.9']['ljung_box_rejection_rate_5pct']):.3f} for the AR(1) settings. KPSS level false-positive rate is {float(by_kind['white_noise']['kpss_level_rejection_rate_5pct']):.3f} for white noise; the trend-KPSS false-positive rate is {float(by_kind['trend_stationary']['kpss_trend_rejection_rate_5pct']):.3f} for the trend-stationary process. The random walk and mean shift are structural/nonstationary alternatives, not independent draws from a stationary null.\n\n")
-        out.write("## ACF and AR(1) recovery\n\n")
+        out.write("## ACF and archived baseline AR(1) recovery\n\n")
         out.write("The theoretical lag-1 autocorrelation is defined here only for white noise (0) and AR(1) (`phi`). The random walk, mean shift, and deterministic trend do not have a single stationary ACF target, so their theory-error fields are intentionally `NA`.\n\n")
         out.write("| process | ACF(1) theory | ACF(1) mean | ACF bias | ACF RMSE | AR(1) phi theory | phi mean | phi bias | phi RMSE |\n|---|---:|---:|---:|---:|---:|---:|---:|---:|\n")
         for r in repeat:

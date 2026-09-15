@@ -1,7 +1,7 @@
 # Ordered keyed mergeable-statistics reference
 
 `reference.py` is an intentionally simple, dependency-free correctness oracle
-for exactly the production functions:
+for exactly the three baseline diagnostic functions:
 
 - `autocorrelation(lag) -> Float64` (a single lag, including lag 0)
 - `ljung_box(max_lag, model_df=0) -> LjungBoxResult(statistic, p_value)`
@@ -58,6 +58,23 @@ the continuation work. It covers fixed-order lagged linear regression, the ADF
 statistic with a caller-selected lag and deterministic terms, the KPSS statistic
 with a Bartlett long-run variance estimate, and an exact single mean-shift scan.
 It does not reuse the mergeable production state or its numerical routines.
+These correspond to the four registered extension APIs, but remain an
+independent batch oracle rather than native implementation evidence. ADF is
+statistic-only (no p-value) and positional; callers requiring equally spaced
+inference must resample first. The native implementation additionally applies
+its documented QR/rcond, residual-resolution, rank, and work policies. KPSS
+uses the function-local floor bandwidth convention and is also statistic-only.
+The intentionally direct mean-shift oracle scans candidate slices in `O(n^2)`;
+the native implementation instead uses an `O(n)` prefix/suffix finalizer.
+Both expose a descriptive score, represent a positive overflowing
+original-scale SSE as `+Inf`, and may underflow a tiny SSE to zero. The Python
+oracle compares candidate SSEs with strict `<` and preserves the earliest
+exact tie. The native finalizer uses
+`gamma_n = n * epsilon / (1 - n * epsilon)` and accepts a later candidate only
+when its SSE improves by more than
+`8 * gamma_n * max(abs(candidate), abs(incumbent))`; this count-aware envelope
+means deliberately near-tied inputs need not select the same split. Native
+validation, SQL/Release acceptance, and CI status remain pending.
 
 The core oracle uses only the Python standard library. When NumPy and
 statsmodels are available, `test_extensions.py` additionally compares lagged

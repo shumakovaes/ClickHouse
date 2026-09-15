@@ -269,9 +269,9 @@ def _write_markdown(path: Path, config: ExperimentConfig, rows: list[dict], repe
         else "SciPy was unavailable in this run, so Ljung–Box p-values use the Wilson–Hilferty chi-square survival approximation."
     )
     with path.open("w", encoding="utf-8") as f:
-        f.write("# Synthetic time-series diagnostics\n\n")
+        f.write("# Archived baseline synthetic time-series diagnostics\n\n")
         f.write(f"Seed `{config.seed}`, n=`{config.n}`, repeated simulations=`{config.reps}`.\n\n")
-        f.write("Scope: the three implemented core diagnostics are ACF, Ljung–Box, and Durbin–Watson. The AR(1) fit/forecast and KPSS sections are exploratory/future-extension outputs and should not be treated as part of the three-diagnostic result. The single-run table is one draw per process. Rejection rates are empirical proportions from independent draws; they are not theoretical probabilities.\n\n")
+        f.write("This is archived baseline exploratory evidence predating the four registered extensions (`timeSeriesLaggedLinearRegression`, `timeSeriesADFStatistic`, `timeSeriesKPSSTest`, and `timeSeriesMeanShiftChangePoint`). The three baseline diagnostics are ACF, Ljung–Box, and Durbin–Watson. The AR(1) fit/forecast and KPSS sections are historical exploratory outputs and should not be treated as part of the three-diagnostic result or as evidence for the registered extensions. The single-run table is one draw per process. Rejection rates are empirical proportions from independent draws; they are not theoretical probabilities.\n\n")
         f.write(f"P-value provenance: {lb_provenance} KPSS p-values use interpolation over standard published asymptotic critical values because its null distribution is non-standard. See `environment.json` for the full runtime record.\n\n")
         f.write("## Single-run diagnostics\n\n")
         columns = ["process", "acf1", "ljung_box_p", "durbin_watson", "ar1_phi_hat", "ar1_forecast", "kpss_level_p", "kpss_trend_p"]

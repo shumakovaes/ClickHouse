@@ -1,5 +1,12 @@
 # Synthetic statistical experiments
 
+This directory preserves archived baseline exploratory evidence predating the
+four registered extensions (`timeSeriesLaggedLinearRegression`,
+`timeSeriesADFStatistic`, `timeSeriesKPSSTest`, and
+`timeSeriesMeanShiftChangePoint`). The historical CSV-derived results and
+simulation code remain unchanged; this runner is not evidence for the newer
+extension APIs.
+
 `run_experiments.py` generates six deliberately simple processes:
 
 - iid white noise;
@@ -29,9 +36,10 @@ Use `--output-dir PATH` to write elsewhere. The default output directory is
 ACF figure if Matplotlib is installed. `audit_results.py` converts the CSVs into
 `results/analysis.md`, including measured rates, ACF theory error, AR(1)
 recovery, and the change-point caveat. The three core diagnostics are ACF,
-Ljung–Box, and Durbin–Watson; AR(1) fit/forecast and KPSS are exploratory/future
-extensions and are reported separately. `results/environment.json` records the
-runtime and p-value provenance. NumPy is required; SciPy improves
+Ljung–Box, and Durbin–Watson; the AR(1) fit/forecast and KPSS sections are
+archived baseline exploratory outputs and are reported separately. They
+predate, and do not characterize, the four registered extensions.
+`results/environment.json` records the runtime and p-value provenance. NumPy is required; SciPy improves
 Ljung–Box p-values but is optional. Without SciPy, a Wilson–Hilferty chi-square
 survival approximation is used. KPSS p-values are conservative interpolation
 over standard published critical values, because the KPSS null distribution is

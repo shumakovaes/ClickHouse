@@ -1,5 +1,8 @@
 # Native benchmark summary
 
+> Archived baseline evidence for the three original coursework APIs only;
+> this historical summary is not extension validation.
+
 The native harness completed all 81 main measurements (three functions,
 three row counts, three lag labels, and three repetitions), plus three
 serialized-state, three merge-fan-in, and nine grouped-series measurements.

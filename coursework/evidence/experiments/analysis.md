@@ -1,8 +1,17 @@
-# Measured results audit
+# Archived baseline measured-results audit
 
-These statements describe the generated CSVs, not theoretical guarantees. All rates use the fixed-seed run (`n=300`, `reps=200`, seed `20260910`). A 5% rejection rate is the decision rule (`p < 0.05`).
+This is archived baseline exploratory evidence predating the four registered
+extensions (`timeSeriesLaggedLinearRegression`, `timeSeriesADFStatistic`,
+`timeSeriesKPSSTest`, and `timeSeriesMeanShiftChangePoint`). These statements
+describe the generated CSVs, not theoretical guarantees. All rates use the
+fixed-seed run (`n=300`, `reps=200`, seed `20260910`). A 5% rejection rate is
+the decision rule (`p < 0.05`).
 
-Scope: the three implemented core diagnostics are ACF, Ljung–Box, and Durbin–Watson. AR(1) fit/forecast and KPSS values are exploratory/future-extension outputs, reported separately and not counted as one of the three core diagnostics. The runtime and p-value provenance are recorded in `environment.json`.
+Scope: the three implemented baseline diagnostics are ACF, Ljung–Box, and
+Durbin–Watson. AR(1) fit/forecast and KPSS values are archived exploratory
+outputs from before the four registered extensions, reported separately and not
+counted as one of the three core diagnostics. The runtime and p-value
+provenance are recorded in `environment.json`.
 
 ## Formula audit
 
@@ -23,7 +32,7 @@ For Ljung–Box, white noise is the serial-correlation null; its rejection rate 
 
 The measured Ljung–Box false-positive rate is 0.065 (white noise), with detection 1.000 and 1.000 for the AR(1) settings. KPSS level false-positive rate is 0.025 for white noise; the trend-KPSS false-positive rate is 0.045 for the trend-stationary process. The random walk and mean shift are structural/nonstationary alternatives, not independent draws from a stationary null.
 
-## ACF and AR(1) recovery
+## ACF and archived baseline AR(1) recovery
 
 The theoretical lag-1 autocorrelation is defined here only for white noise (0) and AR(1) (`phi`). The random walk, mean shift, and deterministic trend do not have a single stationary ACF target, so their theory-error fields are intentionally `NA`.
 

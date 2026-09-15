@@ -19,7 +19,11 @@ serialization round-trips.
 This program is quarantined comparison evidence, not the production ClickHouse
 implementation. In particular, its compact path requires dense ordered ranges;
 the production keyed state accepts timestamp gaps, arbitrary row/state order,
-and retains all samples. AR(1) and KPSS remain exploratory rather than SQL APIs.
+and retains all samples. The AR(1) and KPSS portions are archived baseline
+exploratory evidence predating the four registered extensions
+(`timeSeriesLaggedLinearRegression`, `timeSeriesADFStatistic`,
+`timeSeriesKPSSTest`, and `timeSeriesMeanShiftChangePoint`); they are not SQL
+API claims for those extensions.
 
 Compile and run in the configured Ubuntu WSL distribution:
 

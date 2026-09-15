@@ -19,8 +19,12 @@ CH_REPO_URL="${CH_REPO_URL:-https://github.com/ClickHouse/ClickHouse.git}"
 # Set this to the branch or tag that contains the coursework patch. The
 # upstream default branch does not contain these changes.
 CH_REPO_REF="${CH_REPO_REF:-}"
+# Cloning without a ref is only allowed with this explicit acknowledgement.
+# This is useful for toolchain-only work, but is not a coursework validation
+# checkout because upstream's default branch does not carry the patch.
+CH_ALLOW_UPSTREAM_DEFAULT="${CH_ALLOW_UPSTREAM_DEFAULT:-}"
 CH_COPY_FROM="${CH_COPY_FROM:-}"
-CH_TEST_PATTERN="${CH_TEST_PATTERN:-}"
+CH_TEST_PATTERN="${CH_TEST_PATTERN:-^0516[1-4]_}"
 CH_TEST_QUERY_DIR="${CH_TEST_QUERY_DIR:-}"
 CH_ENV_FILE="${CH_ENV_FILE:-${CH_BUILD_DIR}/environment.txt}"
 CH_CC="${CC:-clang-21}"
@@ -93,7 +97,7 @@ check_toolchain() {
     linker_path="$(command -v -- "$CH_LD" || true)"
     [[ -n "$linker_path" ]] || die "missing LLD linker for Clang $major: $CH_LD"
     linker_version="$($linker_path --version 2>&1 | head -1)"
-    linker_major="$(printf '%s\n' "$linker_version" | sed -nE 's/.*[^0-9]([0-9]+)\.[0-9]+.*/\1/p')"
+    linker_major="$(printf '%s\n' "$linker_version" | sed -nE 's/^[^0-9]*([0-9]+)\..*/\1/p')"
     [[ "$linker_major" == "$major" ]] || die "LLD major must match Clang $major; found $linker_version"
     ar_path="$(command -v -- "$CH_AR" || true)"
     [[ -n "$ar_path" ]] || die "missing LLVM archiver for Clang $major: $CH_AR"
@@ -111,6 +115,54 @@ check_toolchain() {
 source_root() {
     [[ -d "$CH_SOURCE_DIR" ]] || die "source directory does not exist: $CH_SOURCE_DIR"
     [[ -f "$CH_SOURCE_DIR/CMakeLists.txt" ]] || die "not a ClickHouse source tree: $CH_SOURCE_DIR"
+}
+
+path_under_mnt() {
+    local path="$1" canonical
+    case "$path" in
+        /mnt|/mnt/*) return 0 ;;
+    esac
+    if command -v realpath >/dev/null 2>&1; then
+        canonical="$(realpath -m -- "$path" 2>/dev/null || true)"
+        [[ "$canonical" == /mnt || "$canonical" == /mnt/* ]]
+    else
+        return 1
+    fi
+}
+
+check_ext4_paths() {
+    if path_under_mnt "$CH_SOURCE_DIR"; then
+        die "source path must be in WSL ext4, not /mnt: $CH_SOURCE_DIR"
+    fi
+    if path_under_mnt "$CH_BUILD_DIR"; then
+        die "build path must be in WSL ext4, not /mnt: $CH_BUILD_DIR"
+    fi
+}
+
+cmake_cache_value() {
+    local key="$1"
+    sed -n -E "s/^${key}:[^=]*=(.*)$/\1/p" "$CH_BUILD_DIR/CMakeCache.txt" | tail -1
+}
+
+read_cmake_selection() {
+    local cache="$CH_BUILD_DIR/CMakeCache.txt"
+    [[ -f "$cache" ]] || die "CMake cache not found: $cache (run configure first)"
+    CH_ACTUAL_BUILD_TYPE="$(cmake_cache_value CMAKE_BUILD_TYPE)"
+    CH_ACTUAL_ENABLE_TESTS="$(cmake_cache_value ENABLE_TESTS)"
+    CH_ACTUAL_ENABLE_LIBRARIES="$(cmake_cache_value ENABLE_LIBRARIES)"
+    [[ -n "$CH_ACTUAL_BUILD_TYPE" ]] || die "CMakeCache.txt has no CMAKE_BUILD_TYPE: $cache"
+    [[ -n "$CH_ACTUAL_ENABLE_TESTS" ]] || die "CMakeCache.txt has no ENABLE_TESTS: $cache"
+    [[ -n "$CH_ACTUAL_ENABLE_LIBRARIES" ]] || die "CMakeCache.txt has no ENABLE_LIBRARIES: $cache"
+}
+
+verify_requested_cmake_selection() {
+    read_cmake_selection
+    local requested_tests requested_libraries
+    requested_tests="$(printf '%s' "$CH_ENABLE_TESTS" | tr '[:lower:]' '[:upper:]')"
+    requested_libraries="$(printf '%s' "$CH_ENABLE_LIBRARIES" | tr '[:lower:]' '[:upper:]')"
+    [[ "$CH_ACTUAL_BUILD_TYPE" == "$CH_BUILD_TYPE" ]] || die "CMake cache uses build type '$CH_ACTUAL_BUILD_TYPE', requested '$CH_BUILD_TYPE'; re-run configure"
+    [[ "$CH_ACTUAL_ENABLE_TESTS" == "$requested_tests" ]] || die "CMake cache uses ENABLE_TESTS=$CH_ACTUAL_ENABLE_TESTS, requested $CH_ENABLE_TESTS; re-run configure"
+    [[ "$CH_ACTUAL_ENABLE_LIBRARIES" == "$requested_libraries" ]] || die "CMake cache uses ENABLE_LIBRARIES=$CH_ACTUAL_ENABLE_LIBRARIES, requested $CH_ENABLE_LIBRARIES; re-run configure"
 }
 
 sync_submodules() {
@@ -141,14 +193,16 @@ clone_source() {
     local -a clone_args
     require_cmd git
     [[ ! -e "$CH_SOURCE_DIR" ]] || die "refusing to clone over existing path: $CH_SOURCE_DIR"
+    if [[ -z "$CH_REPO_REF" ]]; then
+        [[ "$CH_ALLOW_UPSTREAM_DEFAULT" == "1" ]] || die "set CH_REPO_REF to the coursework branch/tag, or set CH_ALLOW_UPSTREAM_DEFAULT=1 to explicitly acknowledge that the default branch is not coursework validation"
+        note "Explicitly allowing the repository default branch; this checkout is not marked as coursework-patched"
+    fi
     mkdir -p "$(dirname "$CH_SOURCE_DIR")"
     note "Cloning into WSL ext4: $CH_SOURCE_DIR"
     clone_args=(--depth=1 --no-tags --recurse-submodules --shallow-submodules)
     if [[ -n "$CH_REPO_REF" ]]; then
         clone_args+=(--branch "$CH_REPO_REF")
         note "Using repository ref: $CH_REPO_REF"
-    else
-        note "Using the repository default branch; it must already contain the coursework patch"
     fi
     git clone "${clone_args[@]}" "$CH_REPO_URL" "$CH_SOURCE_DIR"
 }
@@ -165,6 +219,7 @@ copy_source() {
 }
 
 configure_build() {
+    check_ext4_paths
     source_root
     check_toolchain
     mkdir -p "$CH_BUILD_DIR"
@@ -183,13 +238,16 @@ configure_build() {
         -DENABLE_XRAY=OFF \
         -DSPLIT_DEBUG_SYMBOLS=OFF \
         -DENABLE_LIBRARIES="$CH_ENABLE_LIBRARIES"
+    verify_requested_cmake_selection
 }
 
 build_clickhouse() {
+    check_ext4_paths
     source_root
     require_cmd cmake
     [[ "$CH_JOBS" =~ ^[1-9][0-9]*$ ]] || die "CH_JOBS must be a positive integer"
     [[ -f "$CH_BUILD_DIR/build.ninja" ]] || die "build is not configured: run configure first"
+    verify_requested_cmake_selection
     mkdir -p "$(dirname "$CH_BUILD_LOG")"
     note "Building target $CH_BUILD_TARGET with $CH_JOBS job(s); log: $CH_BUILD_LOG"
     CMAKE_BUILD_PARALLEL_LEVEL="$CH_JOBS" cmake --build "$CH_BUILD_DIR" --target "$CH_BUILD_TARGET" 2>&1 | tee "$CH_BUILD_LOG"
@@ -208,7 +266,7 @@ focused_test() {
     require_cmd python3
     binary="$(binary_path)"
     pattern="$CH_TEST_PATTERN"
-    [[ -n "$pattern" ]] || die 'set CH_TEST_PATTERN to a test-name regex (for example: 00001_select_1)'
+    [[ -n "$pattern" ]] || die 'CH_TEST_PATTERN must be a non-empty test-name regex (default: ^0516[1-4]_)'
     if [[ -n "$CH_TEST_QUERY_DIR" ]]; then
         query_dir="$CH_TEST_QUERY_DIR"
     else
@@ -229,6 +287,7 @@ focused_test() {
 
 capture_environment() {
     source_root
+    read_cmake_selection
     mkdir -p "$(dirname "$CH_ENV_FILE")"
     note "Capturing environment in $CH_ENV_FILE"
     {
@@ -248,9 +307,9 @@ capture_environment() {
         printf 'LD: %s; AR: %s\n' "$CH_LD" "$CH_AR"
         printf 'python: '; python3 --version 2>/dev/null || true
         printf 'build-target: %s\n' "$CH_BUILD_TARGET"
-        printf 'enable-libraries: %s\n' "$CH_ENABLE_LIBRARIES"
-        printf 'enable-tests: %s\n' "$CH_ENABLE_TESTS"
-        printf 'build-type: %s\n' "$CH_BUILD_TYPE"
+        printf 'enable-libraries: %s\n' "$CH_ACTUAL_ENABLE_LIBRARIES"
+        printf 'enable-tests: %s\n' "$CH_ACTUAL_ENABLE_TESTS"
+        printf 'build-type: %s\n' "$CH_ACTUAL_BUILD_TYPE"
         printf 'minimum-clang: %s\n' "$CH_MIN_CLANG"
         printf 'minimum-cmake: %s\n' "$CH_MIN_CMAKE"
     } | tee "$CH_ENV_FILE"
@@ -268,7 +327,7 @@ Actions:
   configure  Configure Ninja Debug; default target is AggregateFunctions
   build      Build CH_BUILD_TARGET; defaults to clickhouse_aggregate_functions
   smoke      Run build/programs/clickhouse local --query 'SELECT 1'
-  test       Run one stateless pattern from CH_TEST_PATTERN, serially
+  test       Run one stateless pattern from CH_TEST_PATTERN (default: ^0516[1-4]_), serially
   capture    Save WSL/toolchain/git information to CH_ENV_FILE
   all        install, clone (or copy), configure, build, capture; smoke if binary exists
 
@@ -276,7 +335,8 @@ Environment overrides:
   CH_SOURCE_DIR, CH_BUILD_DIR, CH_BUILD_LOG, CH_JOBS, CH_BUILD_TARGET, CH_ENABLE_LIBRARIES,
   CH_ENABLE_TESTS, CH_BUILD_TYPE,
   CH_CC, CH_CXX, CH_LD, CH_AR,
-  CH_MIN_CLANG, CH_MIN_CMAKE, CH_REPO_URL, CH_REPO_REF, CH_COPY_FROM, CH_TEST_PATTERN, CH_TEST_QUERY_DIR,
+  CH_MIN_CLANG, CH_MIN_CMAKE, CH_REPO_URL, CH_REPO_REF, CH_ALLOW_UPSTREAM_DEFAULT, CH_COPY_FROM,
+  CH_TEST_PATTERN, CH_TEST_QUERY_DIR,
   CH_ENV_FILE
 EOF
 }
@@ -294,7 +354,18 @@ case "$action" in
     capture) capture_environment ;;
     all)
         install_deps
-        if [[ -n "$CH_COPY_FROM" ]]; then copy_source; else clone_source; fi
+        if [[ -n "$CH_COPY_FROM" ]]; then
+            copy_source
+            source_root
+            if [[ -d "$CH_SOURCE_DIR/.git" || -f "$CH_SOURCE_DIR/.git" ]]; then
+                sync_submodules
+            else
+                note "Copied source has no Git metadata; cannot synchronize submodules"
+            fi
+            [[ -f "$CH_SOURCE_DIR/contrib/sysroot/README.md" ]] || die "required contrib/sysroot is missing after copy: $CH_SOURCE_DIR/contrib/sysroot/README.md"
+        else
+            clone_source
+        fi
         configure_build
         build_clickhouse
         capture_environment

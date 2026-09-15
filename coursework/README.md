@@ -1,12 +1,23 @@
 # ClickHouse time-series diagnostics coursework package
 
-This package contains the coursework evidence and the current native C++ implementation of three mergeable aggregate functions:
+This package contains the coursework evidence and the current native C++ implementation of three baseline mergeable aggregate functions plus four statistical extension APIs.
+
+The baseline diagnostics are:
 
 * `timeSeriesAutocorrelation(lag[, max_samples])`
 * `timeSeriesLjungBoxTest(max_lag[, model_df[, max_samples]])`
 * `timeSeriesDurbinWatson([max_samples])`
 
-The implementation stores `(timestamp, Float64 value)` samples, canonicalizes by timestamp before finalization/merge/serialization, rejects duplicate timestamps, and enforces the serialized sample cap. The native source is copied from the active ClickHouse checkout and is registered there by the corresponding checkout change; this package is an evidence bundle, not a second source tree.
+The four extensions are:
+
+| API | Signature and result |
+|---|---|
+| `timeSeriesLaggedLinearRegression` | `timeSeriesLaggedLinearRegression(order[, max_samples])(timestamp, value)` -> `Tuple(intercept Float64, coefficients Array(Float64))`; fixed-order positional lagged regression. |
+| `timeSeriesADFStatistic` | `timeSeriesADFStatistic(augmentation_lags[, deterministic[, max_samples]])(timestamp, value)` -> `Tuple(statistic Float64, coefficient Float64, observations UInt64)`; fixed-lag ADF statistic for `none`, `constant`, or `trend`, with no p-value. |
+| `timeSeriesKPSSTest` | `timeSeriesKPSSTest(regression[, bandwidth[, max_samples]])(timestamp, value)` -> `Tuple(statistic Float64, bandwidth UInt64, observations UInt64)`; level/trend KPSS statistic with the implementation's Bartlett bandwidth convention, with no p-value. |
+| `timeSeriesMeanShiftChangePoint` | `timeSeriesMeanShiftChangePoint(min_segment[, max_samples])(timestamp, value)` -> `Tuple(split_index UInt64, score Float64, mean_before Float64, mean_after Float64, sse Float64)`; descriptive one-mean-shift estimator with earliest tied split. |
+
+All seven APIs store `(timestamp, Float64 value)` samples and canonicalize by timestamp before finalization, merge, and serialization; duplicate timestamps and cap overflow are rejected. The baseline native source is copied into `native/`. The extension source remains in the active ClickHouse checkout at the paths listed below and is registered there by the corresponding checkout change; this package is an evidence bundle, not a second source tree.
 
 ## Package map
 
@@ -27,22 +38,52 @@ The implementation stores `(timestamp, Float64 value)` samples, canonicalizes by
 | [comparison/standalone_cpp](comparison/standalone_cpp/) | Dependency-free comparison prototype, explicitly outside the native API. |
 | [build](build/) | WSL setup helper, isolated native-validation runner, and build notes. |
 
+## Extension source, tests, and evidence
+
+The extension implementation is intentionally referenced at its checkout paths
+rather than copied into this bundle:
+
+* `../src/AggregateFunctions/TimeSeries/AggregateFunctionTimeSeriesStatisticalExtensions.h` — shared extension state, parameter envelope, and four-kind declarations.
+* `../src/AggregateFunctions/TimeSeries/AggregateFunctionTimeSeriesStatisticalExtensions.cpp` — factory parsing, result tuples, finalizers, validation, and extension registration.
+* `../src/AggregateFunctions/registerAggregateFunctions.cpp` — checkout registry call for the extension registration function.
+* `../src/AggregateFunctions/tests/gtest_time_series_statistical_extensions.cpp` — focused state, serialization, merge, numerical-boundary, and aggregate tests covering all four APIs.
+* `../tests/queries/0_stateless/05162_time_series_statistical_extensions.sql` and `.reference` — direct SQL, type, parameter, edge, and state/merge coverage.
+* `../tests/queries/0_stateless/05163_time_series_statistical_extensions_distributed.sql` and `.reference` — two-shard `Distributed` merge and duplicate propagation coverage.
+* `../tests/queries/0_stateless/05164_time_series_statistical_extensions_aggregating_merge_tree.sql` and `.reference` — `AggregatingMergeTree` persistence and merge coverage.
+
+Independent evidence and reproduction artifacts are:
+
+* `reference/python/extensions.py` and `reference/python/test_extensions.py` — independent batch oracles and tests for the four statistical contracts.
+* `evidence/experiments/run_extension_experiments.py` — seeded AR, ADF, KPSS, and mean-shift experiment runner; the final provenance-complete LF-normalized output is under `evidence/experiments/extension_results_20260915_final_v3_trusted/`.
+* `evidence/benchmarks/benchmark_extensions.py` — bounded Python-oracle benchmark; `evidence/benchmarks/extensions-20260915/{results.csv,results.json,summary.md}` are the recorded outputs.
+* `build/run_extension_benchmark.sh` — native benchmark harness, requiring an explicitly supplied Release `clickhouse` binary; no native benchmark result is claimed by this bundle.
+* `manuscript/report.md`, `manuscript/report.tex`, and `manuscript/report.pdf` — report source and rendered submission covering the seven APIs and the pending native acceptance ledger.
+
 ## Reproduction and validation status
 
 Run Python commands from this package directory. The experiment suite and generated evidence are available in [evidence/experiments](evidence/experiments/); benchmark outputs are in [evidence/benchmarks](evidence/benchmarks/). The optional-dependency reference validation is recorded in [evidence/trusted-reference](evidence/trusted-reference/). The numbered SQL test is in [tests/functional](tests/functional/), and [build/setup_wsl.sh](build/setup_wsl.sh) prepares a WSL toolchain.
 
-Current validation status (2026-09-10): the production and factory-registration
-translation units compile with Clang 21 and `-Werror`; the lean aggregate
-target completed **5,672/5,672** actions and the unified ClickHouse target
-completed **1,167/1,167**. The built 26.9.1.1 binary executed all three SQL
+Archived baseline validation status (2026-09-10): for the original three
+diagnostics, the production and factory-registration translation units compile
+with Clang 21 and `-Werror`; the lean aggregate target completed
+**5,672/5,672** actions and the unified ClickHouse target completed
+**1,167/1,167**. The built 26.9.1.1 binary executed all three baseline SQL
 functions. The focused GoogleTest run passes **15/15**, and the numbered
 stateless test passes **1/1**, including a real two-shard `Distributed` merge,
 canonical state bytes, and `AggregatingMergeTree` persistence. The isolated
-NumPy/SciPy/statsmodels reference suite passes **15/15**; the experiment suite
-reports **6 passed**. The standalone comparison reports **1,764 checks** in
-both normal and ASan/UBSan runs. The native Debug benchmark completed 81 main
-measurements plus state-size, fan-in, and grouped-series cases; its process-
-startup-dominated results are reported without a production-throughput claim.
+NumPy/SciPy/statsmodels reference suite passes **15/15**; the baseline
+experiment suite reports **6 passed**. The standalone comparison reports
+**1,764 checks** in both normal and ASan/UBSan runs. The native Debug benchmark
+completed 81 main measurements plus state-size, fan-in, and grouped-series
+cases; its process-startup-dominated results are reported without a
+production-throughput claim. These archived counts predate the four extension
+APIs and are not extension acceptance evidence.
+
+Extension acceptance remains pending: no Release build/gtest/SQL or
+Distributed execution, required CI result, or native Release benchmark result
+is claimed here. The Python oracle, seeded experiments, and Python benchmark
+are independent reference evidence only; they do not establish native
+compilation, linkage, dispatch, serialization, or CI success.
 
 The native source is intended for integration under `src/AggregateFunctions/TimeSeries`; the checkout used to prepare this package already contains that implementation and its factory-registration change. The standalone comparison code is not a substitute for native validation and is quarantined under `comparison/` for that reason.
 
