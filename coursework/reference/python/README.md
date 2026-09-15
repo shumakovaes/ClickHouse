@@ -50,3 +50,23 @@ Fixed seeds cover random range merge trees, arbitrary-row-order/interleaved
 full-state merge trees, large offsets, empty/constant/zero/nonfinite inputs,
 caps, duplicate/canonical serialization rejection, and hand-checked ACF,
 Ljung--Box p-values, and Durbin--Watson cases.
+
+## Statistical-extension batch oracles
+
+`extensions.py` is a second, deliberately independent batch implementation for
+the continuation work. It covers fixed-order lagged linear regression, the ADF
+statistic with a caller-selected lag and deterministic terms, the KPSS statistic
+with a Bartlett long-run variance estimate, and an exact single mean-shift scan.
+It does not reuse the mergeable production state or its numerical routines.
+
+The core oracle uses only the Python standard library. When NumPy and
+statsmodels are available, `test_extensions.py` additionally compares lagged
+regression, ADF, and KPSS results with those third-party implementations. These
+files are reference and test material; a function counts as a native ClickHouse
+feature only after its C++ registration and focused native/SQL validation pass.
+
+Run all reference tests from the repository root:
+
+```powershell
+py -3 -m unittest discover -s coursework/reference/python -p 'test_*.py'
+```
