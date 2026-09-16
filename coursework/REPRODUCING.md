@@ -90,9 +90,13 @@ The helper defaults to `clang-21`, `clang++-21`, `ld.lld-21`, and
 
 ## Release build
 
-Use a separate build directory. The final recorded run used the same settings
-with tests enabled and produced the Release binary whose hash is retained in
-`evidence/native-acceptance-20260916-58b61c3a/`:
+Use a separate build directory. The retained full-build log completes
+`6838/6838` and links `programs/clickhouse`. After the isolated focused-test
+CMake target was added, the full default Release target passed a separate
+incremental `545/545` verification with exit code zero. The latter is not
+reported as a clean rebuild. Both logs, the source patch/status, binary hashes,
+and the build configuration are retained in
+`evidence/release-build-20260916-1ad279671/`:
 
 ```bash
 cd /work/clickhouse
@@ -242,7 +246,7 @@ The output is `<fresh-run-dir>/pdf/report.pdf`. Record the LaTeX version,
 command output, and SHA-256; do not claim PDF regeneration if not run. The
 checked-in final report was regenerated with pdfTeX 1.40.25 and BibTeX 0.99d;
 its four build logs, warning scan, toolchain record, and verified hashes are in
-`evidence/pdf-build-20260916-1ad279671-v2/`.
+`evidence/pdf-build-20260916-30ed69c7b-v7/`.
 
 ## Recorded run ledger (2026-09-16)
 
@@ -253,7 +257,7 @@ blocked rather than being inferred from local execution.
 |---|---|---|
 | Acceptance source revision | `git rev-parse HEAD` | `58b61c3a0f3ab17dddc0507657aca3934b179538`; exact status/patches in `evidence/native-acceptance-20260916-58b61c3a/` |
 | Debug focused build/test | focused target and filter above | **PASS 38/38**; `evidence/debug-gtest-20260916-1ad279671/` |
-| Release build | test-enabled Release/Ninja/Clang 21 | **PASS**; 26.9.1.1 binary identity and hashes in the acceptance and benchmark metadata |
+| Release build | retained full log plus later default-target incremental verification | **PASS**: `6838/6838` full build and `545/545` incremental verification, exit `0`; not claimed as a clean rebuild; `evidence/release-build-20260916-1ad279671/` |
 | Release focused gtest | focused target and filter above | **PASS 38/38**; acceptance ledger |
 | SQL 05161 | exact test name above | **PASS 1/1**, no skip |
 | SQL 05162 | exact test name above | **PASS 1/1**, no skip |
@@ -267,7 +271,7 @@ blocked rather than being inferred from local execution.
 | Native state/merge benchmark | Release state runner | **PASS**, 123 direct + 192 state + 96 merge rows; `evidence/state-merge-benchmark-20260916-1ad279671/` |
 | Generated docs/examples | seven generator checks and focused example runner | **PASS 7/7**; `evidence/docs-examples-20260916-1ad279671/` |
 | Required remote CI | GitHub Actions, draft PR `#1` | **BLOCKED**: the PR is mergeable/clean, but `.github/workflows/pull_request.yml` admits only `master` as its base; this PR correctly targets `coursework/mergeable-time-series-statistics`, and the fork has zero registered self-hosted runners |
-| Technical report PDF | LaTeX, BibTeX, then two final LaTeX passes | **PASS**, 11 pages; SHA-256 `850412fbadc656e3474342cb0e14cb25ceb27fc0741798e1ef8bc725e4bcaf39`; `evidence/pdf-build-20260916-1ad279671-v2/` |
+| Technical report PDF | LaTeX, BibTeX, then two final LaTeX passes | **PASS**, 11 pages; SHA-256 `9965492b94e38ee20861635cb10f399ea3bd2dbebc15b3aac09ab8d67d7421ae`; `evidence/pdf-build-20260916-30ed69c7b-v7/` |
 
 An unrun, failed, skipped, or unsupported check remains visible as such; do
 not convert it into a passing result or substitute an older evidence path.

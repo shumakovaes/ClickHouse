@@ -1,3 +1,2 @@
 pdfTeX 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian)
-kpathsea version 6.3.5
 BibTeX 0.99d (TeX Live 2023/Debian)

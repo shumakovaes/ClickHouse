@@ -25,12 +25,13 @@ Generated evidence is included as data and plots; no compiled artifacts are incl
 | `evidence/benchmarks/` | Reproducible benchmark script and generated CSV/Markdown/JSON outputs |
 | `evidence/benchmarks/benchmark_extensions.py` and `extensions-20260916-final/{results.csv,results.json,summary.md,SHA256SUMS}` | Bounded 90-sample Python-oracle benchmark for the four extensions; not ClickHouse throughput evidence |
 | `evidence/experiments/baseline_sensitivity_20260916_final/` | Fixed-seed positive-lag ACF and Ljung--Box sensitivity evidence, metadata, and SHA-256 manifest |
+| `evidence/release-build-20260916-1ad279671/` | Full Release build completion log (6838/6838), later full default-target incremental verification (545/545), source/build metadata, binary hashes, and SHA-256 manifest |
 | `evidence/native-acceptance-20260916-58b61c3a/` | Release binary identity, 38/38 focused gtest log, 4/4 SQL logs, server configs, commands, ledger, and checked hashes |
 | `evidence/native-benchmark-20260916-58b61c3a/` | 92 native Release benchmark rows, KPSS work-cap boundary, change-point scaling, metadata, queries, and hashes |
 | `evidence/state-merge-benchmark-20260916-1ad279671/` | 123 direct, 192 serialized-state, and 96 state-merge/finalization measurements with exact runner and hashes |
 | `evidence/debug-gtest-20260916-1ad279671/` | Current Debug 38/38 focused gtest log, metadata, and hashes |
 | `evidence/docs-examples-20260916-1ad279671/` | Seven generated documentation examples, all passing, plus focused reports and server logs |
-| `evidence/pdf-build-20260916-1ad279671-v2/` | Final 11-page technical PDF build logs, warning scan, TeX toolchain identity, and SHA-256 records |
+| `evidence/pdf-build-20260916-30ed69c7b-v7/` | Final 11-page technical PDF build logs, warning scan, TeX toolchain identity, and SHA-256 records |
 | `evidence/native-benchmark/` | Native ClickHouse harness, raw TSV measurements, metadata, and measured summary |
 | `evidence/native-validation/` | Compact native build/runtime environment, checksums, SQL test output, gtest output, and smoke row |
 | `evidence/standalone-validation/README.md` | Exact optimized and ASan/UBSan validation record for the quarantined standalone comparison |

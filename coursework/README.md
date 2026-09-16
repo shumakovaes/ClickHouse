@@ -31,12 +31,13 @@ All seven APIs store `(timestamp, Float64 value)` samples and canonicalize by ti
 | [evidence/benchmarks](evidence/benchmarks/) | Python state-design benchmark and captured outputs. |
 | [evidence/native-benchmark](evidence/native-benchmark/) | Executed native ClickHouse benchmark, raw TSV data, metadata, and summary. |
 | [evidence/native-validation](evidence/native-validation/) | Native build, SQL/Distributed, smoke, and focused GoogleTest evidence. |
+| `evidence/release-build-20260916-1ad279671/` | Release build provenance: retained full build `6838/6838`, later default-target incremental verification `545/545`, binary identities, logs, and SHA-256 manifest. |
 | `evidence/native-acceptance-20260916-58b61c3a/` | Final Release-linked 38-test and four-fixture acceptance ledger with commands, configs, logs, hashes, and binary identity. |
 | `evidence/native-benchmark-20260916-58b61c3a/` | Final 92-row native Release timing grid, including KPSS work-cap and change-point scaling boundaries. |
 | `evidence/state-merge-benchmark-20260916-1ad279671/` | Direct, serialized-state, and merge/finalization measurements: 123, 192, and 96 rows respectively. |
 | `evidence/debug-gtest-20260916-1ad279671/` | Exact Debug focused run: 38/38 tests passed. |
 | `evidence/docs-examples-20260916-1ad279671/` | Generated-documentation example runner: all seven selected examples passed. |
-| `evidence/pdf-build-20260916-1ad279671-v2/` | Final technical report build: LaTeX/BibTeX logs, warning scan, toolchain record, and SHA-256. |
+| `evidence/pdf-build-20260916-30ed69c7b-v7/` | Final technical report build: LaTeX/BibTeX logs, warning scan, toolchain record, and SHA-256. |
 | [evidence/standalone-validation](evidence/standalone-validation/) | Exact optimized and ASan/UBSan run record for the quarantined standalone comparison. |
 | [evidence/trusted-reference](evidence/trusted-reference/) | Isolated NumPy/SciPy/statsmodels reference-suite validation record. |
 | [research](research/) | Design, ordering, mergeability, implementation, inventory, and citation notes. |

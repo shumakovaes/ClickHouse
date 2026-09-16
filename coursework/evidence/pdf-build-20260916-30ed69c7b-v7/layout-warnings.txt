@@ -1,0 +1,7 @@
+Underfull \hbox (badness 1117) in paragraph at lines 97--98
+Underfull \hbox (badness 1590) in paragraph at lines 97--98
+Underfull \hbox (badness 10000) in paragraph at lines 237--238
+Underfull \hbox (badness 10000) in paragraph at lines 237--238
+Underfull \hbox (badness 1122) in paragraph at lines 237--238
+Underfull \hbox (badness 7595) in paragraph at lines 310--311
+Output written on /tmp/coursework-pdf-30ed69c7b-v7-kMKV6h/report.pdf (11 pages,
