@@ -55,7 +55,7 @@ therefore exact `O(n)` retained samples with canonical sorted union.
 | M7 | Direct functional fixture and reference for all four extension names | Complete: `05162` passes **1/1** |
 | M8 | Two-shard `Distributed` merge and duplicate propagation | Complete: `05163` passes **1/1**, including all-four cross-shard duplicate errors |
 | M9 | `AggregatingMergeTree` part merge, finalization, persistence, and duplicate failure | Complete: `05164` passes **1/1**, with two persisted parts and four expected errors |
-| M10 | Native acceptance ledger: Release configure/build, seven-API gtest, 05161--05164, Distributed, and `AggregatingMergeTree` raw logs | Complete under `evidence/native-acceptance-20260916-58b61c3a/`; all hashes verify |
+| M10 | Native acceptance ledger: Release build, seven-API gtest, 05161--05164, Distributed, and `AggregatingMergeTree` raw logs | Complete: build provenance under `evidence/release-build-20260916-1ad279671/`, execution evidence under `evidence/native-acceptance-20260916-58b61c3a/`; all hashes verify |
 | M11 | Native Release benchmark with recorded resource/timing metadata | Complete: 92 main rows plus 123 direct, 192 state-size, and 96 merge rows |
 | M12 | Required remote CI jobs and generated/reference documentation check | Documentation complete (seven generator checks and 7/7 examples); remote CI **BLOCKED** because the PR workflow admits only `master` as its base, the PR correctly targets the coursework base branch, and the fork has zero registered self-hosted runners |
 

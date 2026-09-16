@@ -1,0 +1,18 @@
+key	value
+status	PASS
+scope	full default Ninja target, incremental verification
+clean_rebuild	no
+source_revision	1ad279671de9cdda088fb64046d6ae1d4e7f854f
+source_status	dirty
+build_type	Release
+build_dir	/home/user/clickhouse-coursework/tmp/coursework/build-release
+started_utc	2026-09-16T16:01:24Z
+finished_utc	2026-09-16T16:27:23Z
+exit_code	0
+ninja_log_lines_after	7410
+original_full_build_status	PASS
+original_full_build_steps	6838/6838
+original_full_build_log_lines	6839
+original_full_build_log_sha256	ee8c734d209343bd6c5e3eac6b5268c6dd10397a53e07e4b1dfb7c18fcefcff5
+incremental_default_target_status	PASS
+incremental_default_target_steps	545/545

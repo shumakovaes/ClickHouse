@@ -250,7 +250,7 @@ Source presence and registration are not equivalent to validated native executio
 
 | Native acceptance layer | Current status |
 |---|---|
-| Release configure/build | **PASS** — full Release build completed `6838/6838`; current revision `1ad279671de9cdda088fb64046d6ae1d4e7f854f`, binary SHA-256 `c0753569f7b2c1abc1c41e3e5ae57c5834f4094bff879df64dac236eba33eac4`. |
+| Release build | **PASS** — the retained full-build log completes `6838/6838` and links `programs/clickhouse`. With the isolated focused-test CMake target applied, the default Release target then passed an incremental `545/545` verification at revision `1ad279671de9cdda088fb64046d6ae1d4e7f854f` (exit `0`); this is not claimed as a clean rebuild. Binary SHA-256: `c0753569f7b2c1abc1c41e3e5ae57c5834f4094bff879df64dac236eba33eac4`; evidence: `evidence/release-build-20260916-1ad279671/`. |
 | Seven-API focused GoogleTest | **PASS** — `38/38` in Release acceptance and again `38/38` in the focused Debug run; the Release acceptance package is `evidence/native-acceptance-20260916-58b61c3a/`, the Debug package is `evidence/debug-gtest-20260916-1ad279671/`. |
 | SQL stateless fixtures `05161`–`05164` | **PASS** — `4/4`, zero skipped and zero failed; results and command logs are in `evidence/native-acceptance-20260916-58b61c3a/`. |
 | Two-shard Distributed and `AggregatingMergeTree` execution | **PASS** — both paths, including duplicate-key error propagation, are included in the same native acceptance package. |

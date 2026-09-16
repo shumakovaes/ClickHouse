@@ -174,7 +174,11 @@ Before a new name is counted as implemented, require all of the following:
 The final local run uses a separate Release directory and records revision,
 submodule state, Clang 21/Ninja/CMake identity, exact commands, exit codes,
 durations, test counts, configs, resource measurements, and SHA-256 manifests.
-This supports a local Release-validation claim only. Required remote GitHub CI
+The retained full-build log reaches 6838/6838, and the later default-target
+incremental verification reaches 545/545 with exit 0; both are retained under
+`evidence/release-build-20260916-1ad279671/`, which explicitly records that the
+later run is not a clean rebuild. This supports a local Release-validation
+claim only. Required remote GitHub CI
 remains **BLOCKED**: draft PR `#1` is mergeable/clean, but the inherited
 workflow admits only `master` as its base while the PR correctly targets
 `coursework/mergeable-time-series-statistics`, and the fork has zero registered
