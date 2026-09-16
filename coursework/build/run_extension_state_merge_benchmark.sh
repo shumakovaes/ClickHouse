@@ -184,10 +184,9 @@ validate_kpss_case() {
     (( n >= 3 )) || die "$label requires n >= 3 for trend KPSS; got n=$n"
     (( bandwidth < n )) \
         || die "$label requires bandwidth=$bandwidth below n=$n for KPSS"
-    if (( bandwidth > 0 )); then
-        (( n <= 100000000 / bandwidth )) \
-            || die "$label exceeds KPSS work cap for n=$n, bandwidth=$bandwidth"
-    fi
+    # Deliberately allow n * bandwidth above the native work cap here.  Those
+    # cases are valid benchmark inputs: the documented result is NaN, and the
+    # harness records that boundary through expected_result().
 }
 
 validate_mean_shift_case() {
