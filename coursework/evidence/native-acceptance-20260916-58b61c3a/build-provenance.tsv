@@ -1,0 +1,5 @@
+key	value
+selected_gtest_target	unit_tests_time_series_diagnostics
+selected_gtest_binary	/home/user/clickhouse-coursework/tmp/coursework/build-release/src/unit_tests_time_series_diagnostics
+configured_build	/home/user/clickhouse-coursework/tmp/coursework/build-release
+build_action	not-run

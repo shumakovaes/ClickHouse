@@ -15,8 +15,9 @@ correctly. The four extension implementations and registration are at
 and `src/AggregateFunctions/registerAggregateFunctions.cpp`; their focused
 native tests are at
 `src/AggregateFunctions/tests/gtest_time_series_statistical_extensions.cpp`.
-That source currently defines 23 extension cases; execution and acceptance
-remain pending.
+That source defines 23 extension cases. Together with 15 baseline cases it
+passes **38/38** in the recorded Release and Debug focused runs; the four SQL
+fixtures pass **4/4** with no skips.
 
 This file is the decision gate for the next four research directions. A method
 is not a native API merely because a Python or standalone C++ prototype exists.
@@ -170,9 +171,9 @@ Before a new name is counted as implemented, require all of the following:
 
 ## Release and CI claims
 
-The baseline evidence is a focused Debug validation, not Release or full CI.
-New results must use a separate build directory and record revision, submodule
-state, toolchain, flags, exact commands, exit codes, durations, test counts,
-resource use, and artifact hashes. A local Release build supports only a local
-Release-validation claim. Full-CI wording requires the actual required remote
-jobs to complete successfully.
+The final local run uses a separate Release directory and records revision,
+submodule state, Clang 21/Ninja/CMake identity, exact commands, exit codes,
+durations, test counts, configs, resource measurements, and SHA-256 manifests.
+This supports a local Release-validation claim only. Required remote GitHub CI
+remains **BLOCKED** because the fork exposes no runnable required workflow/run
+set or compatible self-hosted runner; no full-CI claim is made.

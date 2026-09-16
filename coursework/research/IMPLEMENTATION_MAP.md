@@ -57,21 +57,21 @@ earliest split.
 2. Add serialization/version and duplicate/cap rejection tests. **Complete for
    the baseline diagnostics: the isolated reference and focused native
    GoogleTest suites recorded 15/15, including malformed and bounded-reserve
-   payload cases. The extension GoogleTest source currently defines 23 cases;
-   its execution remains part of native acceptance.**
-3. Register the four extension functions and result tuples. **Source
-   registration is present; extension validation/acceptance remains pending.**
+   payload cases. The extension source defines 23 cases; Release and Debug
+   combined runs pass 38/38 including the 15 baseline cases.**
+3. Register the four extension functions and result tuples. **Complete and
+   linked into the recorded Release binary.**
 4. Add SQL and distributed permutation/merge tests against the independent
    reference. **The exact stateless fixtures are present at
    `tests/queries/0_stateless/05162_time_series_statistical_extensions.sql`,
    `05163_time_series_statistical_extensions_distributed.sql`, and
    `05164_time_series_statistical_extensions_aggregating_merge_tree.sql`;
-   SQL/Distributed execution remains pending.**
+   all four fixtures pass 4/4 with no skips.**
 5. Publish generated docs and benchmark evidence only after M6 in `PLAN.md`.
-   **Python/statistical evidence and benchmark inputs are packaged; native
-   Release, SQL, and CI acceptance remain pending.**
+   **Complete for generated pages, examples, and native/Python benchmarks;
+   required remote CI remains BLOCKED.**
 
 The compact range/interval design is a rejected negative result and must not be
 introduced as an optimization without re-opening the arbitrary-order contract.
-Validation, release-build acceptance, and CI status for the four extensions are
-**pending evidence**.
+Validation and local Release acceptance are complete in the dated evidence
+packages. Required remote CI remains **BLOCKED**, not inferred from local runs.

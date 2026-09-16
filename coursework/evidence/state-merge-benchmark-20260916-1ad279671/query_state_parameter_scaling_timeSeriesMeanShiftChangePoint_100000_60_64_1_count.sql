@@ -1,0 +1,1 @@
+SELECT count() FROM (SELECT timeSeriesMeanShiftChangePointState(60, 1000000)(toUInt64(number), if(number < 50000, 0.0, 1.0)) AS state FROM numbers(100000) GROUP BY number % 64) SETTINGS enable_time_series_aggregate_functions = 1, max_threads = 1

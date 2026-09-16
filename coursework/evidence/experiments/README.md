@@ -45,6 +45,23 @@ survival approximation is used. KPSS p-values are conservative interpolation
 over standard published critical values, because the KPSS null distribution is
 non-standard.
 
+## Final baseline sensitivity run
+
+`run_baseline_sensitivity_experiments.py` is the narrower, dependency-free
+follow-up used by the final report. The recorded directory
+`baseline_sensitivity_20260916_final/` contains 12,000 raw positive-lag ACF
+rows, 1,800 raw Ljung--Box rows, 60 and 9 summary rows respectively, metadata,
+and a checked SHA-256 manifest. It uses seed `20260916`, 200 repetitions,
+sample sizes 100/300/1000 for Ljung--Box, and lags 1--20 for ACF. Every ACF
+result is cross-checked against `FullSampleKeyedStats`; rejection rates include
+Monte Carlo standard errors and Wilson intervals and remain finite-sample
+simulation estimates rather than universal guarantees.
+
+```powershell
+py evidence/experiments/run_baseline_sensitivity_experiments.py `
+  --output-dir <fresh-run-dir>/baseline-sensitivity
+```
+
 ## Interpretation cautions
 
 Rejection rates are estimates with Monte Carlo error, not universal properties

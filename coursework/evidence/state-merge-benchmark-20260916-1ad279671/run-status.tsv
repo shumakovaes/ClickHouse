@@ -1,0 +1,7 @@
+key	value
+status	completed
+exit_code	0
+started_utc	2026-09-16T14:56:46Z
+finished_utc	2026-09-16T14:58:49Z
+source_revision	1ad279671de9cdda088fb64046d6ae1d4e7f854f
+binary	/home/user/clickhouse-coursework/tmp/coursework/build-release/programs/clickhouse

@@ -9,10 +9,11 @@ registers seven private-preview aggregate APIs, consisting of the three
 diagnostics and the four extensions listed below. The coursework names are not
 claimed to be upstream/public APIs at that date.
 
-Source presence and factory registration establish implementation scope only.
-Release build, focused native tests, SQL/Distributed fixtures,
-`AggregatingMergeTree`, performance, and CI acceptance for the four extensions
-remain **pending**; this file makes no validation-pass claim.
+Source presence and factory registration establish implementation scope only;
+the dated evidence adds execution. Release and Debug focused runs pass 38/38,
+SQL/Distributed/`AggregatingMergeTree` fixtures pass 4/4, native performance
+grids are recorded, and generated examples pass 7/7. Required remote CI is
+still **BLOCKED**, so this file makes no full-CI claim.
 
 ## Decision
 
@@ -95,6 +96,5 @@ URL. For formula claims, preserve a primary statistical reference. For the
 coursework-only APIs, cite the checkout source and state explicitly that it is
 working-tree implementation evidence. Keep upstream/public behavior,
 coursework implementation, and measured experiment results explicitly
-separated. In particular, source registration or Python/reference evidence
-must not be reported as native validation while the acceptance gates remain
-pending.
+separated. Native claims here are tied to the dated raw ledgers; Python results
+alone and local runs are never reported as remote CI.

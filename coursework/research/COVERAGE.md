@@ -4,20 +4,27 @@ This is a review-based coverage assessment, not an LLVM, gcov, or ClickHouse
 whole-program coverage report. It maps the shared state, the three original
 diagnostics, and the four newly registered statistical extensions to executable
 tests or to an explicitly recorded gap. The extension sources and test
-fixtures are present in the working tree; the current Release-linked native,
-SQL, distributed, and remote-CI acceptance run remains pending.
+fixtures are present in the working tree. The final local Release and Debug
+evidence records 38/38 focused native tests, 4/4 functional SQL fixtures
+(including Distributed and AggregatingMergeTree paths), and the dedicated
+documentation and benchmark checks. Remote CI is blocked by runner/workflow
+availability and is reported separately rather than being inferred from local
+execution.
 
 ## Evidence inventory
 
 | Evidence | Scope and current status |
 |---|---|
-| `src/AggregateFunctions/tests/gtest_time_series_diagnostics.cpp` | Fifteen focused native tests for the original keyed state and three diagnostics; the prior Debug evidence recorded 15/15. |
-| `src/AggregateFunctions/tests/gtest_time_series_statistical_extensions.cpp` | Twenty-three focused test cases (eight state/envelope cases and fifteen aggregate/finalizer cases) for the four extension kinds; source is present, execution count is pending the dedicated acceptance run. |
-| `tests/queries/0_stateless/05161_time_series_diagnostics.sql` plus `.reference` | Existing public-path coverage for the original three functions; prior Debug evidence recorded 1/1. |
-| `tests/queries/0_stateless/05162_time_series_statistical_extensions.sql` plus `.reference` | Direct stateless coverage for all four extensions: preview gate, result shapes, undefined cases, parameter validation, representative `UInt64`/`Float64` dispatch, NULL handling, Decimal rejection, state combinators, duplicates, and non-finite values; fixture is present, execution is pending. |
-| `tests/queries/0_stateless/05163_time_series_statistical_extensions_distributed.sql` plus `.reference` | Two-shard `Distributed` merge, serialized partial-state merge, and cross-shard duplicate propagation for all four extensions; fixture is present, execution is pending. |
-| `tests/queries/0_stateless/05164_time_series_statistical_extensions_aggregating_merge_tree.sql` plus `.reference` | `AggregatingMergeTree` part/state persistence and duplicate-key failure for all four extensions; fixture is present, execution is pending. |
-| `coursework/reference/python/test_reference.py`, `test_extensions.py`, and recorded experiment outputs | Independent formula, ordering, validation, statistical, and numerical evidence. These are oracle evidence, not proof of native dispatch or ClickHouse execution. |
+| `src/AggregateFunctions/tests/gtest_time_series_diagnostics.cpp` | Fifteen focused native tests for the original keyed state and three diagnostics; included in the final 38/38 Release and Debug runs. |
+| `src/AggregateFunctions/tests/gtest_time_series_statistical_extensions.cpp` | Twenty-three focused test cases (eight state/envelope cases and fifteen aggregate/finalizer cases) for the four extension kinds; included in the final 38/38 Release and Debug runs. |
+| `tests/queries/0_stateless/05161_time_series_diagnostics.sql` plus `.reference` | Existing public-path coverage for the original three functions; passed as part of the final 4/4 functional SQL run. |
+| `tests/queries/0_stateless/05162_time_series_statistical_extensions.sql` plus `.reference` | Direct stateless coverage for all four extensions: preview gate, result shapes, undefined cases, parameter validation, representative `UInt64`/`Float64` dispatch, NULL handling, Decimal rejection, state combinators, duplicates, and non-finite values; passed. |
+| `tests/queries/0_stateless/05163_time_series_statistical_extensions_distributed.sql` plus `.reference` | Two-shard `Distributed` merge, serialized partial-state merge, and cross-shard duplicate propagation for all four extensions; passed. |
+| `tests/queries/0_stateless/05164_time_series_statistical_extensions_aggregating_merge_tree.sql` plus `.reference` | `AggregatingMergeTree` part/state persistence and duplicate-key failure for all four extensions; passed. |
+| `coursework/reference/python/test_reference.py`, `test_extensions.py`, and recorded experiment outputs | Independent formula, ordering, validation, statistical, and numerical evidence: 25/25 reference tests and 6/6 extension tests passed. These are oracle evidence, not proof of native dispatch or ClickHouse execution. |
+| `coursework/evidence/native-benchmark-20260916-58b61c3a/` | Native Release benchmark: 92 result rows covering the four extensions, representative sizes, and the documented KPSS work-cap boundary; hashes and metadata verified. |
+| `coursework/evidence/state-merge-benchmark-20260916-1ad279671/` | Native Release state/merge benchmark: 123 direct rows, 192 serialized-state-size rows, and 96 merge rows; hashes and metadata verified. |
+| `coursework/evidence/docs-examples-20260916-1ad279671/` | Generated documentation and executable examples: all seven selected examples passed; all seven generated pages passed exact regeneration checks. |
 
 The extension implementation is in
 `src/AggregateFunctions/TimeSeries/AggregateFunctionTimeSeriesStatisticalExtensions.{h,cpp}`
@@ -31,14 +38,14 @@ parameters.
 
 | ID | State branch or invariant | Evidence | Assessment |
 |---|---|---|---|
-| S1 | Finite keyed samples are accepted, with arbitrary input order canonicalized before finalization | Existing diagnostics gtest and 05161; extension gtest shuffled-order case and 05162/05163 | Covered by test definitions; extension execution pending |
-| S2 | Non-increasing keys mark a state dirty; canonical sorting then validates strict uniqueness | Existing diagnostics tests; extension state tests and 05162 duplicate cases | Covered in the shared state; extension public run pending |
-| S3 | Non-finite values are rejected | Existing diagnostics gtest/SQL; extension gtest rejection case and 05162 NaN case | Covered by source-level tests; execution pending for the extension path |
-| S4 | Positive `max_samples` and hard maximum are enforced on adds and merges | Existing diagnostics gtest/SQL; delegated extension state and 05162 parameter cases | Shared implementation covered; extension public execution pending |
-| S5 | Unsorted states sort before merge/finalization; sorted states still validate uniqueness | Existing diagnostics tests; extension shuffled/interleaved merge tests | Covered by direct test definitions; current extension run pending |
-| S6 | Canonical two-pointer merge handles left/right choices, duplicate keys, and unequal tails | Existing diagnostics gtest/SQL; extension interleaved merge and 05163 distributed cases | Covered by test definitions; distributed execution pending |
-| S7 | Extension envelope rejects unsupported version/kind, parameter mismatch, and truncation; the delegated payload retains the shared count/order validation | Extension gtest parameter-mismatch/corrupt-envelope/truncated-payload case plus existing diagnostics malformed-payload tests | Envelope tests are present; extension execution pending |
-| S8 | Empty, valid, and degenerate states retain the documented result shape and counts | Existing diagnostics tests; extension degenerate fixtures and 05162 | Covered by test definitions; public execution pending |
+| S1 | Finite keyed samples are accepted, with arbitrary input order canonicalized before finalization | Existing diagnostics gtest and 05161; extension gtest shuffled-order case and 05162/05163 | Covered and executed in the final native and SQL acceptance ledgers |
+| S2 | Non-increasing keys mark a state dirty; canonical sorting then validates strict uniqueness | Existing diagnostics tests; extension state tests and 05162 duplicate cases | Covered and executed in native, direct SQL, Distributed, and persistence paths |
+| S3 | Non-finite values are rejected | Existing diagnostics gtest/SQL; extension gtest rejection case and 05162 NaN case | Covered and executed for the extension path |
+| S4 | Positive `max_samples` and hard maximum are enforced on adds and merges | Existing diagnostics gtest/SQL; delegated extension state and 05162 parameter cases | Covered and executed; exhaustive allocator/resource-failure coverage remains out of scope |
+| S5 | Unsorted states sort before merge/finalization; sorted states still validate uniqueness | Existing diagnostics tests; extension shuffled/interleaved merge tests | Covered and executed in the final Release/Debug runs |
+| S6 | Canonical two-pointer merge handles left/right choices, duplicate keys, and unequal tails | Existing diagnostics gtest/SQL; extension interleaved merge and 05163 distributed cases | Covered and executed, including the two-shard Distributed fixture |
+| S7 | Extension envelope rejects unsupported version/kind, parameter mismatch, and truncation; the delegated payload retains the shared count/order validation | Extension gtest parameter-mismatch/corrupt-envelope/truncated-payload case plus existing diagnostics malformed-payload tests | Covered and executed by the focused native tests |
+| S8 | Empty, valid, and degenerate states retain the documented result shape and counts | Existing diagnostics tests; extension degenerate fixtures and 05162 | Covered and executed in native and public SQL paths |
 
 ## Original diagnostic branches
 
@@ -59,38 +66,38 @@ The original matrix remains applicable to the unchanged diagnostics state:
 
 | Branch or contract | Evidence in the working tree | Assessment |
 |---|---|---|
-| Positional AR model, exact order-1 hand fixture, shuffled rows, intercept and coefficient-array result | Extension gtest `LaggedRegressionExactAndShuffled`; 05162 exact and shuffled queries; 05163 distributed reference | Covered by test definitions; native/public execution pending |
+| Positional AR model, exact order-1 hand fixture, shuffled rows, intercept and coefficient-array result | Extension gtest `LaggedRegressionExactAndShuffled`; 05162 exact and shuffled queries; 05163 distributed reference | Covered and executed in native, direct SQL, and Distributed paths |
 | Centered/scaled non-pivoted Givens QR, fixed order range 1--16, reciprocal-condition and finite-fit guards | Implementation source and extension gtest degenerate/merge/work-cap cases | Ordinary successful and undefined paths plus both lagged-regression and ADF QR work boundaries are represented; every rank/conditioning alternative is not exhaustively forced |
-| Insufficient, constant, rank-deficient, or non-finite fit returns fixed-shape NaNs | Extension gtest `DegenerateFinalizersReturnNaN`; 05162 undefined and non-finite cases | Covered by test definitions; execution pending |
+| Insufficient, constant, rank-deficient, or non-finite fit returns fixed-shape NaNs | Extension gtest `DegenerateFinalizersReturnNaN`; 05162 undefined and non-finite cases | Covered and executed in native and direct SQL paths |
 | `rows * order^2` work guard | Source guard; no dedicated public boundary assertion in the current fixtures | Explicit gap: add a native boundary test before claiming exhaustive regression-finalizer coverage |
 
 ### `timeSeriesADFStatistic`
 
 | Branch or contract | Evidence in the working tree | Assessment |
 |---|---|---|
-| Fixed augmentation lag 0--16; deterministic `none`, `constant`, and `trend`; named `(statistic, coefficient, observations)` result; no p-value | Extension gtest golden cases for all deterministics; 05162 exact tuple/type queries | Covered by test definitions; execution pending |
-| Statsmodels-compatible fixed-lag admission, observation count, positive residual degrees of freedom, and exact-fit undefined result | Extension gtest minimum-boundary, exact-fit, small-noise/lag/trend cases; 05162 boundary queries | Covered by test definitions; execution pending |
-| Positional trend semantics after canonical key sorting and arbitrary/interleaved state merge | Extension gtest interleaved merge; 05162 shuffled/state queries; 05163 distributed fixture | Covered by test definitions; distributed execution pending |
+| Fixed augmentation lag 0--16; deterministic `none`, `constant`, and `trend`; named `(statistic, coefficient, observations)` result; no p-value | Extension gtest golden cases for all deterministics; 05162 exact tuple/type queries | Covered and executed in native and direct SQL paths |
+| Statsmodels-compatible fixed-lag admission, observation count, positive residual degrees of freedom, and exact-fit undefined result | Extension gtest minimum-boundary, exact-fit, small-noise/lag/trend cases; 05162 boundary queries | Covered and executed in native and direct SQL paths |
+| Positional trend semantics after canonical key sorting and arbitrary/interleaved state merge | Extension gtest interleaved merge; 05162 shuffled/state queries; 05163 distributed fixture | Covered and executed, including the Distributed fixture |
 | QR rank/conditioning, residual-resolution, work, and extreme-scale guards | Source and selected degenerate cases | Partial: selected guards are exercised, but every threshold and numeric boundary is not exhaustively sampled |
 
 ### `timeSeriesKPSSTest`
 
 | Branch or contract | Evidence in the working tree | Assessment |
 |---|---|---|
-| Level/trend regression, explicit bandwidth, default `min(n - 1, floor(12*(n/100)^0.25))`, and named `(statistic, bandwidth, observations)` result | Extension gtest hand/trend/default-boundary cases; 05162 exact and 101-row queries | Covered by test definitions; execution pending |
-| Bartlett long-run variance with `q=0`, `q=n-1`, and rejection at `q>=n` | Extension gtest `KPSSTrendBandwidthAndDefaultBandwidthBoundaries`; 05162 boundary queries | Covered by test definitions; execution pending |
-| Constant/short/invalid cases, `q <= 1024`, and checked `n*q <= 100000000` work policy | Extension gtest constant/work-cap cases; 05162 q=1024 case; 05163 distributed state | Covered by test definitions; execution and exact boundary result pending |
-| Statistic-only contract and no p-value | Source documentation, gtest tuple checks, 05162/05163 | Covered by source/test definitions; generated documentation check pending |
+| Level/trend regression, explicit bandwidth, default `min(n - 1, floor(12*(n/100)^0.25))`, and named `(statistic, bandwidth, observations)` result | Extension gtest hand/trend/default-boundary cases; 05162 exact and 101-row queries | Covered and executed in native and direct SQL paths |
+| Bartlett long-run variance with `q=0`, `q=n-1`, and rejection at `q>=n` | Extension gtest `KPSSTrendBandwidthAndDefaultBandwidthBoundaries`; 05162 boundary queries | Covered and executed in native and direct SQL paths |
+| Constant/short/invalid cases, `q <= 1024`, and checked `n*q <= 100000000` work policy | Extension gtest constant/work-cap cases; 05162 q=1024 case; 05163 distributed state | Covered and executed; the native work-cap boundary intentionally returns the documented undefined result |
+| Statistic-only contract and no p-value | Source documentation, gtest tuple checks, 05162/05163 | Covered and executed; generated documentation checks pass for all seven pages |
 
 ### `timeSeriesMeanShiftChangePoint`
 
 | Branch or contract | Evidence in the working tree | Assessment |
 |---|---|---|
-| One-break scan, `min_segment`, exact split/means/score/SSE, and descriptive (not p-value) result | Extension gtest hand fixture; 05162 exact tuple query; 05163 distributed and 05164 persistence | Covered by test definitions; execution pending |
-| Earliest split for numerical ties and no-improvement `(split_index=0, NaN fields)` | Extension gtest tie/no-improvement/repeated-tie cases; 05162 repeated-pattern query | Covered by test definitions; execution pending |
-| Direct suffix Welford accumulation preserves tiny SSE under cancellation and large-offset behavior | Extension gtest large-offset and cancellation cases | Covered by direct test definition; execution pending |
-| Positive original-scale SSE overflow reports `+Inf`; tiny SSE may underflow to zero | Extension gtest overflow case; implementation documentation | Covered by test definition; execution pending |
-| Constant/empty/short series returns undefined result | Extension gtest degenerate case; 05162 undefined query | Covered by test definitions; execution pending |
+| One-break scan, `min_segment`, exact split/means/score/SSE, and descriptive (not p-value) result | Extension gtest hand fixture; 05162 exact tuple query; 05163 distributed and 05164 persistence | Covered and executed in native, direct SQL, Distributed, and persistence paths |
+| Earliest split for numerical ties and no-improvement `(split_index=0, NaN fields)` | Extension gtest tie/no-improvement/repeated-tie cases; 05162 repeated-pattern query | Covered and executed in native and direct SQL paths |
+| Direct suffix Welford accumulation preserves tiny SSE under cancellation and large-offset behavior | Extension gtest large-offset and cancellation cases | Covered and executed by the focused native tests |
+| Positive original-scale SSE overflow reports `+Inf`; tiny SSE may underflow to zero | Extension gtest overflow case; implementation documentation | Covered and executed by the focused native tests |
+| Constant/empty/short series returns undefined result | Extension gtest degenerate case; 05162 undefined query | Covered and executed in native and direct SQL paths |
 
 ## Public-path and persistence coverage
 
@@ -106,8 +113,8 @@ payload tests remain a lower-level gtest responsibility.
 cluster and checks direct distributed finalization, serialized partial-state
 merge, and duplicate-key error propagation. `05164` creates separate
 `AggregatingMergeTree` parts, merges all four extension states, finalizes them,
-and checks duplicate-state failure. These fixtures are present with references;
-their current execution result must be recorded by the dedicated acceptance run.
+and checks duplicate-state failure. The final native acceptance package records
+all four fixtures as passing, with zero skipped cases.
 
 ## Explicit gaps and remaining gates
 
@@ -115,14 +122,11 @@ The following are intentionally not reported as covered:
 
 * instrumented line/branch percentages for ClickHouse or the new translation
   unit;
-* the Release configure/build, Release-linked gtest run, and actual SQL result
-  counts for 05161--05164;
-* actual two-shard Distributed and `AggregatingMergeTree` execution logs;
-* required remote CI jobs; local execution is not remote-CI evidence;
-* native Release performance/resource measurements (the Python oracle is not a
-  native benchmark);
-* generated/reference documentation extraction and publication checks for the
-  four new source `FunctionDocumentation` entries;
+* required remote CI jobs; local execution is not remote-CI evidence. The
+  configured workflow currently cannot run the full required remote runner
+  matrix, so CI remains BLOCKED pending runner/workflow intervention;
+* exhaustive platform/compiler/allocation/resource matrices beyond the recorded
+  Linux Release and Debug runs, and exhaustive scalar-width coverage;
 * direct invocation of every internal unknown-name and `Field::tryGet`
   conversion alternative, every scalar width, every allocator/accounting
   failure, and every exception path in ClickHouse framework code;
@@ -144,8 +148,9 @@ merge boundary.
 
 The shared state and the four extension source/test surfaces are implemented in
 the working tree, and the test matrix above records the intended contract. The
-prior three-diagnostic Debug evidence remains valid for the unchanged baseline.
-No extension Release/gtest/SQL/Distributed/`AggregatingMergeTree`/remote-CI
-pass count is claimed until the dedicated acceptance run produces its raw logs;
-the remaining validation and generated-documentation gates are deliberately
-left pending.
+final local evidence records 38/38 focused native tests in both Release and
+Debug, 4/4 functional SQL fixtures with no skips, including Distributed and
+`AggregatingMergeTree`, 92 native benchmark rows, 123/192/96 state/size/merge
+benchmark rows, 25/25 and 6/6 independent Python tests, and 7/7 executable
+documentation examples. Remote CI remains BLOCKED, and exhaustive
+cross-platform and allocation-failure coverage remains intentionally open.

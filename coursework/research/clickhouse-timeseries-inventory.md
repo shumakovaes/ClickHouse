@@ -90,9 +90,10 @@ implemented in `AggregateFunctionTimeSeriesDiagnostics.cpp`; the four
 coursework extensions are implemented in
 `AggregateFunctionTimeSeriesStatisticalExtensions.cpp`. This is working-tree
 evidence, not evidence that these names were upstream/public on 2026-09-10.
-The extension acceptance ledger remains pending: registration, Python/reference
-results, or source inspection does not establish native Release, SQL,
-Distributed, `AggregatingMergeTree`, performance, or CI validation.
+The dated extension ledger now establishes local Release/Debug, SQL,
+Distributed, `AggregatingMergeTree`, performance-grid, and documentation
+execution. Registration, Python results, and source inspection were not used as
+substitutes. Required remote CI remains BLOCKED and is reported separately.
 
 Let `n` be retained samples, `m = min(max_lag, n - 1)`, `p` be an order or
 augmentation lag, `c` be the regression column count, and `q` be the KPSS

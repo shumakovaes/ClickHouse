@@ -1,0 +1,7 @@
+key	value
+status	completed
+exit_code	0
+started_utc	2026-09-16T14:54:25Z
+completed_utc	2026-09-16T14:54:45Z
+build_dir	/home/user/clickhouse-coursework/tmp/coursework/build-release
+binary	/home/user/clickhouse-coursework/tmp/coursework/build-release/programs/clickhouse

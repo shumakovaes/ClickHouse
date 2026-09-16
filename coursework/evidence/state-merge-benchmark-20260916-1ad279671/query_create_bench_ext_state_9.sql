@@ -1,0 +1,1 @@
+SET enable_time_series_aggregate_functions = 1; SET max_threads = 1; DROP TABLE IF EXISTS bench_ext_state_9; CREATE TABLE bench_ext_state_9 (part UInt32, state AggregateFunction(timeSeriesKPSSTest('trend', 8, 1000000), UInt64, Float64)) ENGINE = Memory;

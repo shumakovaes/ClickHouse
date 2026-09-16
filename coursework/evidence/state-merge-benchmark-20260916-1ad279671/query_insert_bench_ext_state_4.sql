@@ -1,0 +1,1 @@
+SET enable_time_series_aggregate_functions = 1; SET max_threads = 1; INSERT INTO bench_ext_state_4 SELECT toUInt32(number % 64), timeSeriesLaggedLinearRegressionState(4, 1000000)(toUInt64(number), toFloat64(cityHash64(number) % 1000003) / 1000003.0) FROM numbers(100000) GROUP BY number % 64 SETTINGS enable_time_series_aggregate_functions = 1, max_threads = 1

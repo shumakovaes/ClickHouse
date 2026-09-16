@@ -1,0 +1,7 @@
+clickhouse_path=/home/user/clickhouse-coursework/tmp/coursework/build-release/programs/clickhouse
+clickhouse_sha256=90abccdca3cc4ee9ddce5fd5ee9e8aa44df84bfc24d4deaf325b5f9ae3d6789d
+ClickHouse local version 26.9.1.1.
+gtest_target=unit_tests_time_series_diagnostics
+gtest_path=/home/user/clickhouse-coursework/tmp/coursework/build-release/src/unit_tests_time_series_diagnostics
+gtest_sha256=624de1703d28bc8c66cab21c05270e11f437ea211e63812856404d2a3b7ed61e
+gtest_size_bytes=415963936

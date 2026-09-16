@@ -1,0 +1,4 @@
+CMAKE_BUILD_TYPE:STRING=Release
+CMAKE_CXX_COMPILER:STRING=/usr/bin/clang++-21
+CMAKE_TOOLCHAIN_FILE:FILEPATH=/home/user/clickhouse-coursework/cmake/linux/toolchain-x86_64.cmake
+CMAKE_GENERATOR:INTERNAL=Ninja

@@ -74,7 +74,10 @@ exact tie. The native finalizer uses
 when its SSE improves by more than
 `8 * gamma_n * max(abs(candidate), abs(incumbent))`; this count-aware envelope
 means deliberately near-tied inputs need not select the same split. Native
-validation, SQL/Release acceptance, and CI status remain pending.
+validation is recorded separately: Release and Debug focused runs pass 38/38,
+and SQL fixtures 05161--05164 pass 4/4. These Python files remain an
+independent oracle rather than native evidence. Required remote CI is still
+**BLOCKED**, not passed.
 
 The core oracle uses only the Python standard library. When NumPy and
 statsmodels are available, `test_extensions.py` additionally compares lagged

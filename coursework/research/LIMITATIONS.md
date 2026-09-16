@@ -4,8 +4,8 @@
   streaming approximation. `max_samples` bounds accepted records; exceeding it
   fails explicitly.
 - The production surface includes the three diagnostics and four registered
-  extensions: lagged linear regression, ADF, KPSS, and mean shift. Validation,
-  release-build acceptance, and CI status for the extensions remain pending.
+  extensions: lagged linear regression, ADF, KPSS, and mean shift. Local
+  Release/Debug/SQL acceptance is complete; required remote CI remains BLOCKED.
 - ADF exposes the fixed-lag coefficient, its statistic, and usable observation
   count, but no p-value. It assumes positional,
   equally spaced observations; timestamps are not used to infer spacing. The
@@ -37,11 +37,9 @@
 - A compact ordinary aggregate state is a **NO-GO** design for arbitrary row,
   block, and merge order. The compact range/prefix/suffix state is retained only
   as a rejected negative result and is not a production function or fallback.
-- Native validation used a lean Debug build with optional libraries disabled,
-  7.6 GiB of WSL2 RAM, and four build jobs. The aggregate and unified targets,
-  focused gtest, and targeted SQL/Distributed fixture passed, but the complete
-  ClickHouse test corpus and a release-mode build were outside this coursework
-  machine's practical scope.
-- Native benchmark cases stop at 50,000 rows and include process startup. Their
-  0.01-second timing resolution is sufficient to record state footprint and a
-  resource-bounded smoke comparison, not to claim production throughput.
+- Native validation used WSL2 with about 7.6 GiB RAM, four build jobs, optional
+  libraries disabled, and both Release and Debug focused targets. The full
+  ClickHouse test corpus and remote platform matrix remain outside scope.
+- Native benchmark row scaling reaches 1,000,000 samples and includes client
+  startup/protocol time. Its 0.01-second wall-time resolution and single host
+  support relative implementation evidence, not production-throughput SLAs.

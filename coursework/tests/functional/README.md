@@ -48,8 +48,9 @@ Ljung--Box `max_lag` is positive.
 
 The focused native source at
 `src/AggregateFunctions/tests/gtest_time_series_statistical_extensions.cpp`
-currently defines 23 extension cases; executing that suite is part of native
-acceptance. ADF checks cover fixed-lag statistic/coefficient output (no p-value),
+defines 23 extension cases. Together with the 15 baseline cases, the recorded
+Release and Debug focused runs both pass **38/38**. ADF checks cover
+fixed-lag statistic/coefficient output (no p-value),
 positional semantics and the caller's equal-spacing responsibility, and the
 QR/rcond/resolution/work rejection policy. KPSS checks the
 implementation-specific finite-sample bandwidth floor, `q` and work limits,
@@ -66,5 +67,8 @@ explicitly NO-GO for arbitrary merge order.
 The `.reference` values are computed from the production implementation’s
 documented formulas and contracts. Generic SQL cannot manufacture malformed
 opaque aggregate states, so version/count/order/truncation corruption remains
-a lower-level harness responsibility. Extension validation, SQL/release-build
-acceptance, and CI status remain **pending** until the dedicated evidence run.
+a lower-level harness responsibility. The Release-linked acceptance run passes
+`05161`--`05164` **4/4** with no skips, including two-shard and persisted-state
+duplicate failures. Raw logs are under
+`evidence/native-acceptance-20260916-58b61c3a/`. Required remote CI remains
+**BLOCKED** and is not inferred from these local results.

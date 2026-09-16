@@ -1,0 +1,19 @@
+<clickhouse>
+    <tcp_port>19004</tcp_port>
+    <http_port>19005</http_port>
+    <mysql_port remove="remove"/>
+    <postgresql_port remove="remove"/>
+    <interserver_http_port remove="remove"/>
+    <logger>
+        <level>information</level>
+        <log>/tmp/clickhouse-coursework-acceptance.3bgNNPL5/logs/server.log</log>
+        <errorlog>/tmp/clickhouse-coursework-acceptance.3bgNNPL5/logs/server.err.log</errorlog>
+        <console>false</console>
+    </logger>
+    <path>/tmp/clickhouse-coursework-acceptance.3bgNNPL5/data/</path>
+    <tmp_path>/tmp/clickhouse-coursework-acceptance.3bgNNPL5/tmp/</tmp_path>
+    <user_files_path>/tmp/clickhouse-coursework-acceptance.3bgNNPL5/user_files/</user_files_path>
+    <format_schema_path>/tmp/clickhouse-coursework-acceptance.3bgNNPL5/format_schemas/</format_schema_path>
+    <custom_cached_disks_base_directory>/tmp/clickhouse-coursework-acceptance.3bgNNPL5/caches/</custom_cached_disks_base_directory>
+    <user_directories><local_directory><path>/tmp/clickhouse-coursework-acceptance.3bgNNPL5/access/</path></local_directory></user_directories>
+</clickhouse>

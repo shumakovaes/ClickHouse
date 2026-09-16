@@ -1,0 +1,34 @@
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index 330b66c0942d5e0d08a3fa2966528daae12cf603..14d65272016d8495f8f9a897a87db800d3dff28b 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -991,6 +991,29 @@ if (ENABLE_TESTS)
+     # attach all dbms gtest sources
+     grep_gtest_sources("${ClickHouse_SOURCE_DIR}/src" dbms_gtest_sources)
+     clickhouse_add_executable(unit_tests_dbms ${dbms_gtest_sources})
++
++    clickhouse_add_executable(unit_tests_time_series_diagnostics
++        Common/tests/gtest_main.cpp
++        Common/tests/gtest_global_context.cpp
++        AggregateFunctions/tests/gtest_time_series_diagnostics.cpp
++        AggregateFunctions/tests/gtest_time_series_statistical_extensions.cpp)
++    target_link_libraries(unit_tests_time_series_diagnostics PRIVATE
++        ch_contrib::gmock_all
++        ch_contrib::gtest
++        clickhouse_functions
++        clickhouse_aggregate_functions
++        clickhouse_parsers
++        clickhouse_storages_system
++        dbms
++        clickhouse_common_zookeeper_base
++        clickhouse_common_config
++        clickhouse_common_zookeeper
++        readpassphrase
++        ch_contrib::lz4)
++    target_compile_options(unit_tests_time_series_diagnostics PRIVATE
++        -Wno-sign-compare)
++    target_compile_definitions(unit_tests_time_series_diagnostics PRIVATE
++        CLICKHOUSE_TESTS_CONFIG_DIR="${ClickHouse_SOURCE_DIR}/tests/config")
+     add_dependencies (unit_tests_dbms clickhouse-microbenchmarks-objects)
+ 
+     # gtest framework has substandard code

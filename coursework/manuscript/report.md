@@ -1,6 +1,6 @@
 # Exact, mergeable time-series statistics for ClickHouse
 
-**Academic coursework submission · continuation status: 15 September 2026**
+**Academic coursework submission · continuation status: 16 September 2026**
 
 ## Abstract
 
@@ -8,7 +8,7 @@ This coursework studies how order-dependent time-series statistics can be implem
 
 The current source tree registers seven private-preview APIs: autocorrelation, the Ljung–Box test, Durbin–Watson, fixed-order lagged linear regression, a fixed-lag augmented Dickey–Fuller statistic, a KPSS statistic, and a one-mean-shift estimator. The four extensions deliberately return only quantities justified by their stated conventions: ADF and KPSS expose no p-values, while the change-point score is descriptive rather than calibrated. Regression uses a centered/scaled streaming Givens QR solver with explicit rank, conditioning, residual-resolution, and work guards. KPSS uses a function-local Bartlett bandwidth convention. Mean-shift finalization uses directly accumulated suffix moments to avoid cancellation.
 
-Independent Python evidence, with seed `20260915`, `n=240`, and 120 repetitions, records coefficient recovery and directional diagnostic behavior. A separate Python-oracle benchmark measures only the batch reference algorithms and is not native ClickHouse performance evidence. Native Release build, seven-API GoogleTest, SQL/Distributed, and CI counts remain **PENDING** and are shown as explicit acceptance placeholders; no earlier three-function Debug count is reused as evidence for the extended tree.
+Independent Python evidence, with seed `20260915`, `n=240`, and 120 repetitions, records coefficient recovery and directional diagnostic behavior. A separate Python-oracle benchmark measures only the batch reference algorithms and is not native ClickHouse performance evidence. Native evidence is recorded separately: Release and Debug focused GoogleTest both passed `38/38`; SQL fixtures `05161`–`05164` passed `4/4` with no skips; the Distributed and `AggregatingMergeTree` paths passed. The only unresolved acceptance layer is remote CI: it is explicitly **BLOCKED**, not reported as a pass.
 
 ## 1. Research question and scope
 
@@ -246,18 +246,18 @@ Undefined outcomes are part of the contract, not silent success. Depending on th
 
 The checkout on branch `coursework/time-series-extensions` contains the original diagnostics state and wrapper plus `AggregateFunctionTimeSeriesStatisticalExtensions.h/.cpp`. The extension state delegates all keyed storage and canonical merging to the same exact sample state, while its envelope records the finalizer kind and constant parameters. The global registry source calls both registration functions. Three additional SQL/reference fixtures (`05162`--`05164`, four fixtures total with `05161`) and a focused extension GoogleTest source are present in the working tree.
 
-Source presence and registration are not equivalent to validated native execution. The current seven-API acceptance ledger is therefore:
+Source presence and registration are not equivalent to validated native execution. The following ledger records completed local native evidence separately from the still-unavailable remote CI layer:
 
 | Native acceptance layer | Current status |
 |---|---|
-| Release configure/build | **PENDING — record target/action counts, duration, flags, exit code, revision, and binary hash** |
-| Seven-API focused GoogleTest | **PENDING — record passed/failed test counts and runtime from the Release-linked runner** |
-| SQL stateless fixtures `05161`–`05164` | **PENDING — record passed/skipped/failed counts and runtime** |
-| Two-shard Distributed and `AggregatingMergeTree` execution | **PENDING — record the executed fixture result and duplicate-error propagation** |
-| Required remote CI | **PENDING — record actual required-job names and outcomes; local execution is not CI** |
-| Native Release benchmark | **PENDING — do not substitute the Python-oracle benchmark** |
+| Release configure/build | **PASS** — full Release build completed `6838/6838`; current revision `1ad279671de9cdda088fb64046d6ae1d4e7f854f`, binary SHA-256 `c0753569f7b2c1abc1c41e3e5ae57c5834f4094bff879df64dac236eba33eac4`. |
+| Seven-API focused GoogleTest | **PASS** — `38/38` in Release acceptance and again `38/38` in the focused Debug run; the Release acceptance package is `evidence/native-acceptance-20260916-58b61c3a/`, the Debug package is `evidence/debug-gtest-20260916-1ad279671/`. |
+| SQL stateless fixtures `05161`–`05164` | **PASS** — `4/4`, zero skipped and zero failed; results and command logs are in `evidence/native-acceptance-20260916-58b61c3a/`. |
+| Two-shard Distributed and `AggregatingMergeTree` execution | **PASS** — both paths, including duplicate-key error propagation, are included in the same native acceptance package. |
+| Required remote CI | **BLOCKED** — GitHub Actions on the fork exposes no usable workflow/runners to this checkout. Local results are not CI results. |
+| Native Release benchmark | **PASS** — 92 measured rows in `evidence/native-benchmark-20260916-58b61c3a/`; state/merge evidence separately contains 123 direct, 192 state-size, and 96 merge rows in `evidence/state-merge-benchmark-20260916-1ad279671/`. |
 
-The earlier three-diagnostic revision has archived focused Debug evidence. Those historical results remain useful for the unchanged baseline but do not validate compilation, linkage, SQL dispatch, serialization, numerical guards, or distributed behavior of the four new APIs. No native Release/gtest/SQL/CI count is claimed here until a new seven-API run produces its logs.
+The earlier three-diagnostic revision is not used as proof for the extensions. The stated Release/Debug runs cover all seven APIs; the SQL acceptance covers dispatch and serialization-oriented paths, and the Distributed/`AggregatingMergeTree` cases cover merge execution. Each evidence package contains a SHA-256 manifest verified after the run. Remote CI remains a distinct blocked gate.
 
 ## 11. Extension experiment: independent Python evidence
 
@@ -275,7 +275,7 @@ The extension experiment uses seed `20260915`, `n=240`, 120 repetitions, fixed A
 
 ADF and KPSS rows are directional comparisons only. Because the APIs deliberately return no p-values, these rows make no calibrated rejection-rate claim. The optional statsmodels cross-check differences were approximately `5.33e-15` for ADF, zero for the AR intercept, `1.67e-16` and `3.05e-16` for the two AR coefficients, and `1.39e-17` for KPSS. They support agreement of this fixture, not universal equivalence across all inputs and conventions.
 
-The recorded edge grid contains constant, short, and NULL-filtered cases. It checks that undefined results stay explicit, that usable values remain available where defined, and that a constant series maps to `split_index=0`. It is not a replacement for the pending C++ and SQL runs.
+The recorded edge grid contains constant, short, and NULL-filtered cases. It checks that undefined results stay explicit, that usable values remain available where defined, and that a constant series maps to `split_index=0`. It complements, rather than replaces, the completed C++ and SQL runs.
 
 ## 12. Python-oracle benchmark, explicitly non-native
 
@@ -305,7 +305,7 @@ The benchmark spans `n={256,1024,4096}`, AR orders `{1,4,8}`, ADF lags `{0,2,4}`
 - Mean shift assumes at most one change in the mean, returns a descriptive score, and does not provide a false-positive calibration or distinguish mean change from other misspecification.
 - Non-pivoted QR and a fixed `rcond` threshold intentionally reject some difficult but mathematically identifiable designs. The residual-resolution policy may classify genuine noise below the Float64 floor as unresolved.
 - The Python experiment uses one sample length, one top-level seed, and 120 repetitions. Its frequencies are Monte Carlo observations, not theoretical probabilities.
-- The Python benchmark is not native. Native Release build, extension gtest, SQL/Distributed execution, CI, and native Release performance are still pending.
+- The Python benchmark is not native. Native Release build, focused gtest, SQL/Distributed execution, and native performance have been recorded locally, but remote CI remains **BLOCKED** and cross-platform performance/allocation coverage is not exhaustive.
 - The branch is coursework work in a fork; registration metadata is not evidence that the functions have entered an official ClickHouse release.
 
 ## 14. Reproduction protocol
@@ -324,13 +324,13 @@ py -3 ../evidence/benchmarks/benchmark_extensions.py `
   --min-segment 8 --warmup 1 --repetitions 3
 ```
 
-The checked-in experiment evidence is under `evidence/experiments/extension_results_20260915_final_v4_trusted/`; the Python and native benchmark evidence paths are recorded separately. Native acceptance must record the exact revision, submodule state, Release configuration, toolchain, commands, exit codes, durations, test counts, resource use, and artifact hashes. Until those files exist, every native acceptance entry in Section 10 remains `PENDING`.
+The checked-in experiment evidence is under `evidence/experiments/extension_results_20260915_final_v4_trusted/`; the fresh oracle benchmark is `evidence/benchmarks/extensions-20260916-final/`. Native acceptance is `evidence/native-acceptance-20260916-58b61c3a/`, native performance is `evidence/native-benchmark-20260916-58b61c3a/`, state/merge performance is `evidence/state-merge-benchmark-20260916-1ad279671/`, and focused Debug evidence is `evidence/debug-gtest-20260916-1ad279671/`. The seven generated documentation pages pass their exact generator checks, and the isolated documentation runner reports `7/7` selected examples successful in `evidence/docs-examples-20260916-1ad279671/`. Python checks also passed: `25/25` trusted reference tests and `6/6` experiment tests. Every listed package carries a verified SHA-256 manifest. Remote CI is the remaining blocked gate.
 
 ## 15. Conclusion
 
 The central result is architectural. Exact order-dependent statistics can behave as ordinary distributed aggregates when the state retains the complete keyed sample and merge is canonical sorted union. The `1,3,2` counterexample shows why a compact prefix/suffix envelope is not closed under arbitrary ClickHouse merge trees.
 
-Seven private-preview APIs now exist in source with explicit formulas and resource guards. The extensions narrow their claims deliberately: fixed-order AR coefficients, a fixed-lag ADF t-statistic without a p-value, KPSS under a stated Bartlett bandwidth convention without a p-value, and a descriptive one-break mean-shift objective. Independent Python experiments and benchmarks make the mathematics inspectable, but the native Release/gtest/SQL/CI ledger remains pending. Treating those layers separately is necessary for an auditable engineering claim.
+Seven private-preview APIs now exist in source with explicit formulas and resource guards. The extensions narrow their claims deliberately: fixed-order AR coefficients, a fixed-lag ADF t-statistic without a p-value, KPSS under a stated Bartlett bandwidth convention without a p-value, and a descriptive one-break mean-shift objective. Independent Python experiments and benchmarks make the mathematics inspectable; completed local native Release/Debug/gtest/SQL/Distributed/benchmark evidence makes the implementation auditable. Remote CI is deliberately kept separate as **BLOCKED**, rather than being inferred from local success.
 
 ## References
 

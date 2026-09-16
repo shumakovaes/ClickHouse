@@ -1,0 +1,32 @@
+key	value
+date_utc	2026-09-16T14:54:26Z
+benchmark	native extension benchmark
+build_type	Release
+cmake_build_dir	/home/user/clickhouse-coursework/tmp/coursework/build-release
+cmake_cache	/home/user/clickhouse-coursework/tmp/coursework/build-release/CMakeCache.txt
+cmake_toolchain	/home/user/clickhouse-coursework/cmake/linux/toolchain-x86_64.cmake
+cmake_cache_sha256	be65a0678f37a65c45c43991d4ef96f52785a09dd9251bba927ef586d260ca3e
+cmake_toolchain_sha256	9f12f0dbc787b08409befbf25f088e6d7bb0bb578a28ac1f92cf67b2f83bbc5e
+binary	/home/user/clickhouse-coursework/tmp/coursework/build-release/programs/clickhouse
+binary_sha256	90abccdca3cc4ee9ddce5fd5ee9e8aa44df84bfc24d4deaf325b5f9ae3d6789d
+runner_sha256	6c8966016439da4680bbb6d88e3418680abc9b45d2419233c41ae5aef3bea969
+output_dir	/mnt/c/Users/79261/Documents/Codex/2026-09-10/re/outputs/ClickHouse/coursework/evidence/native-benchmark-20260916-58b61c3a
+host	Katebook
+uname	Linux 6.6.87.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun  5 18:30:46 UTC 2025 x86_64
+binary_version	26.9.1.1
+extensions	timeSeriesLaggedLinearRegression,timeSeriesADFStatistic,timeSeriesKPSSTest,timeSeriesMeanShiftChangePoint
+port	19006
+timeout_seconds	120
+setting_clause	SETTINGS enable_time_series_aggregate_functions = 1, max_threads = 1
+n_values	1000,10000
+order_values	1,4,8
+adf_order_values	0,2,4
+kpss_q_values	1,4
+min_segment_values	1,60
+repetitions	3
+warmup	1
+max_threads	1
+source_dir	/home/user/clickhouse-coursework
+cmake_home_directory	/home/user/clickhouse-coursework
+source_revision	58b61c3a0f3ab17dddc0507657aca3934b179538
+source_status_porcelain_sha256	de89fe7b5ccf56a9f3db473b902c6d02e337ff2a982e3d9a1410ed36a62c338f

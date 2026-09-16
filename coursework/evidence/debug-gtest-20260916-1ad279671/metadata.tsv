@@ -1,0 +1,12 @@
+key	value
+source_revision	1ad279671de9cdda088fb64046d6ae1d4e7f854f
+cmake_build_type	Debug
+cmake_enable_tests	ON
+cmake_enable_libraries	OFF
+gtest_binary	/home/user/clickhouse-coursework/tmp/coursework/build-lean/src/unit_tests_time_series_diagnostics
+gtest_binary_sha256	6437d5eee2da88b7041e92688e4e87de3e204673b96a9fbe69dde3bcfe63843b
+filter	TimeSeriesDiagnosticsState.*:TimeSeriesStatisticalExtensionsState.*:TimeSeriesStatisticalExtensionsAggregate.*
+expected_tests	38
+observed_tests	38
+observed_passed	38
+status	PASS

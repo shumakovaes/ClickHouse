@@ -50,14 +50,14 @@ therefore exact `O(n)` retained samples with canonical sorted union.
 | M2 | Shared state add/merge/finalize transitions, canonical sorting, duplicate/cap rejection, versioned serialization, and malformed-state guards | Complete in the existing diagnostics state; reused by the extension envelope |
 | M3 | Ordering and merge-equivalence matrix, including arbitrary interleaving and duplicate cases | Complete in the state contract and the extension test/fixture definitions |
 | M4 | Independent Python/reference coverage for regression, ADF, KPSS, and mean shift, including numerical and edge cases | Present as independent oracle and experiment artifacts; not native execution evidence |
-| M5 | Four extension implementations, source `FunctionDocumentation`, and global registration | Implemented in `AggregateFunctionTimeSeriesStatisticalExtensions.{h,cpp}` and `registerAggregateFunctions.cpp`; current Release-linked acceptance remains pending |
-| M6 | Focused native extension GoogleTest source | Present: `gtest_time_series_statistical_extensions.cpp` defines 23 cases; Release-linked pass/fail count and runtime remain pending |
-| M7 | Direct functional fixture and reference for all four extension names | Present: `05162_time_series_statistical_extensions.sql` plus `.reference`; execution result remains pending |
-| M8 | Two-shard `Distributed` merge and duplicate propagation | Present: `05163_time_series_statistical_extensions_distributed.sql` plus `.reference`; actual distributed run remains pending |
-| M9 | `AggregatingMergeTree` part merge, finalization, persistence, and duplicate failure | Present: `05164_time_series_statistical_extensions_aggregating_merge_tree.sql` plus `.reference`; actual run remains pending |
-| M10 | Native acceptance ledger: Release configure/build, seven-API gtest, 05161--05164, Distributed, and `AggregatingMergeTree` raw logs | Pending; do not infer this from source presence or Python results |
-| M11 | Native Release benchmark with recorded resource/timing metadata | Pending; the Python-oracle benchmark is not a native performance result |
-| M12 | Required remote CI jobs and generated/reference documentation check | Pending actual remote outcomes and generated-doc artifacts |
+| M5 | Four extension implementations, source `FunctionDocumentation`, and global registration | Complete; linked into the recorded 26.9.1.1 Release binary |
+| M6 | Focused native extension GoogleTest source | Complete: 23 extension + 15 baseline cases pass **38/38** in both Release and Debug |
+| M7 | Direct functional fixture and reference for all four extension names | Complete: `05162` passes **1/1** |
+| M8 | Two-shard `Distributed` merge and duplicate propagation | Complete: `05163` passes **1/1**, including all-four cross-shard duplicate errors |
+| M9 | `AggregatingMergeTree` part merge, finalization, persistence, and duplicate failure | Complete: `05164` passes **1/1**, with two persisted parts and four expected errors |
+| M10 | Native acceptance ledger: Release configure/build, seven-API gtest, 05161--05164, Distributed, and `AggregatingMergeTree` raw logs | Complete under `evidence/native-acceptance-20260916-58b61c3a/`; all hashes verify |
+| M11 | Native Release benchmark with recorded resource/timing metadata | Complete: 92 main rows plus 123 direct, 192 state-size, and 96 merge rows |
+| M12 | Required remote CI jobs and generated/reference documentation check | Documentation complete (seven generator checks and 7/7 examples); remote CI **BLOCKED** because the fork has no runnable required workflow/run set or compatible runner |
 
 ## Formula and implementation checkpoints
 
@@ -84,24 +84,14 @@ therefore exact `O(n)` retained samples with canonical sorted union.
    bytes remain a lower-level native harness responsibility because SQL cannot
    manufacture arbitrary aggregate-state payloads.
 
-## Remaining validation and documentation gates
+## Remaining validation gates
 
-The following gates remain intentionally open until the dedicated acceptance
-run records raw commands, revision/submodule state, toolchain, flags, exit
-codes, durations, counts, resource use, and artifact hashes:
+Local Release/Debug, SQL, Distributed, `AggregatingMergeTree`, benchmarks, and
+generated-documentation gates are closed by the 2026-09-16 evidence packages.
+Two limits remain explicit:
 
-* Release configure/build and Release-linked seven-API GoogleTest results;
-* stateless execution of 05161--05164, including the two-shard Distributed
-  merge, duplicate propagation, and `AggregatingMergeTree` finalization;
-* native Release performance/resource measurements;
-* required remote CI jobs (local tests are not remote-CI evidence);
-* generated/reference documentation extraction and publication checks for the
-  four `FunctionDocumentation` entries;
-* exhaustive threshold tests for QR conditioning/work, KPSS work, all scalar
-  widths, every conversion alternative, and framework allocation failures.
-
-Prior focused Debug results for the unchanged three-diagnostic baseline may be
-retained as historical evidence. They do not validate compilation, linkage,
-dispatch, serialization, numerical guards, distributed behavior, Release
-performance, or CI status of the four extensions. No such extension pass or
-status claim is made here before the pending gates produce their logs.
+* required remote GitHub CI is **BLOCKED** until workflows are enabled and
+  compatible runners are available; local execution is not remote-CI evidence;
+* exhaustive platform/allocation coverage (every toolchain, CPU, scalar
+  conversion alternative, threshold neighborhood, and allocation failure) is
+  outside the bounded coursework run.

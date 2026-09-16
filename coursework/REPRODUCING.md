@@ -90,7 +90,9 @@ The helper defaults to `clang-21`, `clang++-21`, `ld.lld-21`, and
 
 ## Release build
 
-Use a separate build directory. This recipe does not claim Release success:
+Use a separate build directory. The final recorded run used the same settings
+with tests enabled and produced the Release binary whose hash is retained in
+`evidence/native-acceptance-20260916-58b61c3a/`:
 
 ```bash
 cd /work/clickhouse
@@ -98,7 +100,7 @@ export CH_SOURCE_DIR=/work/clickhouse
 export CH_BUILD_DIR=/work/clickhouse/build-coursework-release
 export CH_BUILD_TYPE=Release
 export CH_ENABLE_LIBRARIES=OFF
-export CH_ENABLE_TESTS=OFF
+export CH_ENABLE_TESTS=ON
 export CH_JOBS=1
 CH_BUILD_TARGET=clickhouse bash coursework/build/setup_wsl.sh configure
 CH_BUILD_TARGET=clickhouse bash coursework/build/setup_wsl.sh build
@@ -110,9 +112,9 @@ benchmark.
 
 ## Focused GoogleTest
 
-Configure a separate test-enabled Debug directory and build
-`unit_tests_dbms`. The filter covers the diagnostics and all extension state
-and finalizer tests:
+Configure a separate test-enabled directory and build the small focused target
+`unit_tests_time_series_diagnostics`. The filter covers the diagnostics and
+all extension state and finalizer tests:
 
 ```bash
 cd /work/clickhouse
@@ -123,8 +125,8 @@ export CH_ENABLE_LIBRARIES=OFF
 export CH_ENABLE_TESTS=ON
 export CH_JOBS=1
 bash coursework/build/setup_wsl.sh configure
-CH_BUILD_TARGET=unit_tests_dbms bash coursework/build/setup_wsl.sh build
-build-coursework-gtest/src/unit_tests_dbms --gtest_color=no --gtest_filter='TimeSeriesDiagnosticsState.*:TimeSeriesStatisticalExtensionsState.*:TimeSeriesStatisticalExtensionsAggregate.*'
+CH_BUILD_TARGET=unit_tests_time_series_diagnostics bash coursework/build/setup_wsl.sh build
+build-coursework-gtest/src/unit_tests_time_series_diagnostics --gtest_color=no --gtest_filter='TimeSeriesDiagnosticsState.*:TimeSeriesStatisticalExtensionsState.*:TimeSeriesStatisticalExtensionsAggregate.*'
 ```
 
 Save complete stdout/stderr and the exact filter. Enter no pass count until the
@@ -139,14 +141,19 @@ log per fixture; replace `<fresh-run-dir>` with a new directory:
 ```bash
 cd /work/clickhouse
 CH_BINARY=/work/clickhouse/build-coursework-debug/programs/clickhouse
-for test_name in 05161_time_series_diagnostics 05162_time_series_statistical_extensions 05163_time_series_statistical_extensions_distributed 05164_time_series_statistical_extensions_aggregating_merge_tree; do tests/clickhouse-test -q tests/queries -b "$CH_BINARY" --no-long --no-random-settings -j 1 "$test_name" 2>&1 | tee "<fresh-run-dir>/$test_name.log"; done
+for test_name in 05161_time_series_diagnostics 05162_time_series_statistical_extensions 05163_time_series_statistical_extensions_distributed 05164_time_series_statistical_extensions_aggregating_merge_tree; do tests/clickhouse-test -q tests/queries -b "$CH_BINARY" --no-long --no-random-settings --shard -j 1 "$test_name" 2>&1 | tee "<fresh-run-dir>/$test_name.log"; done
 ```
 
-The repository helper can run an isolated smoke plus only 05161, but it does not
-replace the four-fixture run:
+The final repository helper runs the exact Release-linked focused target and
+all four fixtures against one isolated server, while retaining configs,
+commands, exit codes, and hashes:
 
 ```bash
-CH_SOURCE_DIR=/work/clickhouse CH_BUILD_DIR=/work/clickhouse/build-coursework-debug CH_TEST_PATTERN=05161_time_series_diagnostics CH_VALIDATION_OUTPUT=<fresh-run-dir>/native-validation bash coursework/build/run_native_validation.sh
+bash coursework/build/run_extension_native_acceptance.sh \
+  --repo /work/clickhouse \
+  --build /work/clickhouse/build-coursework-release \
+  --output <fresh-run-dir>/native-acceptance \
+  --gtest /work/clickhouse/build-coursework-release/src/unit_tests_time_series_diagnostics
 ```
 
 ## Python oracle and experiments
@@ -201,6 +208,18 @@ includes KPSS `n=97656/97657` and mean-shift `n=10000/100000` boundaries.
 Record any overrides to `N_VALUES`, `ORDER_VALUES`, `ADF_ORDER_VALUES`,
 `KPSS_Q_VALUES`, `MIN_SEGMENT_VALUES`, `WARMUP`, or `REPETITIONS`.
 
+Run the complementary state/merge benchmark separately; its default grid
+reaches one million rows, measures raw serialized state bytes, and times
+pre-materialized `MergeState` and final `Merge` work:
+
+```bash
+CH_BINARY=/work/clickhouse/build-coursework-release/programs/clickhouse \
+CH_SOURCE_DIR=/work/clickhouse \
+CMAKE_BUILD_DIR=/work/clickhouse/build-coursework-release \
+OUTPUT_DIR=<fresh-run-dir>/state-merge-benchmark \
+bash coursework/build/run_extension_state_merge_benchmark.sh
+```
+
 ## PDF regeneration
 
 `coursework/manuscript/report.tex` is checked in beside the generated PDF, but
@@ -220,29 +239,35 @@ pdflatex -interaction=nonstopmode -halt-on-error -output-directory "$PDF_OUT" re
 ```
 
 The output is `<fresh-run-dir>/pdf/report.pdf`. Record the LaTeX version,
-command output, and SHA-256; do not claim PDF regeneration if not run.
+command output, and SHA-256; do not claim PDF regeneration if not run. The
+checked-in final report was regenerated with pdfTeX 1.40.25 and BibTeX 0.99d;
+its four build logs, warning scan, toolchain record, and verified hashes are in
+`evidence/pdf-build-20260916-1ad279671-v2/`.
 
-## Run ledger (fill only after execution)
+## Recorded run ledger (2026-09-16)
 
-Keep raw logs, commands, environment metadata, binary hashes, and generated
-tables in a new run directory. Replace each `[TO FILL]` only with values from
-the corresponding completed command.
+The entries below point only to completed artifacts. Remote CI is kept visibly
+blocked rather than being inferred from local execution.
 
 | Check | Command/input | Result, log, or output path |
 |---|---|---|
-| Checkout revision/status | `git rev-parse HEAD`; `git status --short --branch` | `[TO FILL]` |
-| Debug/lean build | Debug `setup_wsl.sh` configure/build | `[TO FILL]` |
-| Release build | Release `setup_wsl.sh` configure/build | `[TO FILL]` |
-| Focused gtest | `unit_tests_dbms` filter above | `[TO FILL]` |
-| SQL 05161 | exact test name above | `[TO FILL]` |
-| SQL 05162 | exact test name above | `[TO FILL]` |
-| SQL 05163 | exact test name above | `[TO FILL]` |
-| SQL 05164 | exact test name above | `[TO FILL]` |
-| Python oracle/tests | both `unittest discover` commands | `[TO FILL]` |
-| Core/extension experiments | seeded commands above | `[TO FILL]` |
-| Python benchmarks | extension and core scripts | `[TO FILL]` |
-| Native extension benchmark | corrected runner and Release binary | `[TO FILL]` |
-| PDF regeneration | LaTeX, BibTeX, then two final LaTeX passes, if run | `[TO FILL]` |
+| Acceptance source revision | `git rev-parse HEAD` | `58b61c3a0f3ab17dddc0507657aca3934b179538`; exact status/patches in `evidence/native-acceptance-20260916-58b61c3a/` |
+| Debug focused build/test | focused target and filter above | **PASS 38/38**; `evidence/debug-gtest-20260916-1ad279671/` |
+| Release build | test-enabled Release/Ninja/Clang 21 | **PASS**; 26.9.1.1 binary identity and hashes in the acceptance and benchmark metadata |
+| Release focused gtest | focused target and filter above | **PASS 38/38**; acceptance ledger |
+| SQL 05161 | exact test name above | **PASS 1/1**, no skip |
+| SQL 05162 | exact test name above | **PASS 1/1**, no skip |
+| SQL 05163 | exact test name above | **PASS 1/1**, real two-shard route and duplicate propagation |
+| SQL 05164 | exact test name above | **PASS 1/1**, separate parts, final merge, and four duplicate-state errors |
+| Python oracle/tests | both `unittest discover` commands | **PASS 25/25 + 6/6** |
+| Baseline sensitivity experiment | seed 20260916, 200 repetitions | **PASS**; 12,000 ACF + 1,800 Ljung--Box raw rows in `evidence/experiments/baseline_sensitivity_20260916_final/` |
+| Extension experiment | seed 20260915, 120 repetitions | **PASS**; `evidence/experiments/extension_results_20260915_final_v4_trusted/` |
+| Python benchmark | extension oracle script | **PASS**, 90 samples; `evidence/benchmarks/extensions-20260916-final/` |
+| Native extension benchmark | Release runner | **PASS**, 92 rows; `evidence/native-benchmark-20260916-58b61c3a/` |
+| Native state/merge benchmark | Release state runner | **PASS**, 123 direct + 192 state + 96 merge rows; `evidence/state-merge-benchmark-20260916-1ad279671/` |
+| Generated docs/examples | seven generator checks and focused example runner | **PASS 7/7**; `evidence/docs-examples-20260916-1ad279671/` |
+| Required remote CI | GitHub Actions | **BLOCKED**: the fork has no runnable required workflow/run set or compatible self-hosted runners |
+| Technical report PDF | LaTeX, BibTeX, then two final LaTeX passes | **PASS**, 11 pages; SHA-256 `850412fbadc656e3474342cb0e14cb25ceb27fc0741798e1ef8bc725e4bcaf39`; `evidence/pdf-build-20260916-1ad279671-v2/` |
 
 An unrun, failed, skipped, or unsupported check remains visible as such; do
 not convert it into a passing result or substitute an older evidence path.

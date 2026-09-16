@@ -1,0 +1,92 @@
+{
+ "examples": [
+  {
+   "id": "AggregateFunction/timeSeriesADFStatistic#0",
+   "type": "Aggregate Function",
+   "name": "timeSeriesADFStatistic",
+   "source": "src/AggregateFunctions/TimeSeries/AggregateFunctionTimeSeriesStatisticalExtensions.cpp",
+   "status": "ok",
+   "known": "",
+   "verdict": "ok",
+   "query": "SET enable_time_series_aggregate_functions = 1;\nSELECT\n    round(result.statistic, 6) AS statistic,\n    round(result.coefficient, 6) AS coefficient,\n    result.observations\nFROM\n(\n    SELECT timeSeriesADFStatistic(0, 'constant')(timestamp, value) AS result\n    FROM values('timestamp UInt64, value Float64', (5, 4.), (0, 1.), (3, 3.), (1, 2.), (4, 2.), (2, 1.))\n);",
+   "documented": "-1.562771\t-1.214286\t5",
+   "detail": ""
+  },
+  {
+   "id": "AggregateFunction/timeSeriesAutocorrelation#0",
+   "type": "Aggregate Function",
+   "name": "timeSeriesAutocorrelation",
+   "source": "src/AggregateFunctions/TimeSeries/AggregateFunctionTimeSeriesDiagnostics.cpp",
+   "status": "ok",
+   "known": "",
+   "verdict": "ok",
+   "query": "SET enable_time_series_aggregate_functions = 1;\nSELECT round(timeSeriesAutocorrelation(1)(timestamp, value), 6) AS acf\nFROM values('timestamp UInt64, value Float64', (4, 5.), (1, 2.), (3, 4.), (0, 1.), (2, 3.));",
+   "documented": "0.4",
+   "detail": ""
+  },
+  {
+   "id": "AggregateFunction/timeSeriesDurbinWatson#0",
+   "type": "Aggregate Function",
+   "name": "timeSeriesDurbinWatson",
+   "source": "src/AggregateFunctions/TimeSeries/AggregateFunctionTimeSeriesDiagnostics.cpp",
+   "status": "ok",
+   "known": "",
+   "verdict": "ok",
+   "query": "SET enable_time_series_aggregate_functions = 1;\nSELECT round(timeSeriesDurbinWatson()(timestamp, residual), 6) AS statistic\nFROM values('timestamp UInt64, residual Float64', (4, 4.), (1, 1.), (3, 3.), (2, 2.));",
+   "documented": "0.1",
+   "detail": ""
+  },
+  {
+   "id": "AggregateFunction/timeSeriesKPSSTest#0",
+   "type": "Aggregate Function",
+   "name": "timeSeriesKPSSTest",
+   "source": "src/AggregateFunctions/TimeSeries/AggregateFunctionTimeSeriesStatisticalExtensions.cpp",
+   "status": "ok",
+   "known": "",
+   "verdict": "ok",
+   "query": "SET enable_time_series_aggregate_functions = 1;\nSELECT\n    round(result.statistic, 6) AS statistic,\n    result.bandwidth,\n    result.observations\nFROM\n(\n    SELECT timeSeriesKPSSTest('level', 0)(timestamp, value) AS result\n    FROM values('timestamp UInt64, value Float64', (3, 1.), (0, 0.), (2, 1.), (1, 0.))\n);",
+   "documented": "0.375\t0\t4",
+   "detail": ""
+  },
+  {
+   "id": "AggregateFunction/timeSeriesLaggedLinearRegression#0",
+   "type": "Aggregate Function",
+   "name": "timeSeriesLaggedLinearRegression",
+   "source": "src/AggregateFunctions/TimeSeries/AggregateFunctionTimeSeriesStatisticalExtensions.cpp",
+   "status": "ok",
+   "known": "",
+   "verdict": "ok",
+   "query": "SET enable_time_series_aggregate_functions = 1;\nSELECT\n    round(result.intercept, 6) AS intercept,\n    arrayMap(coefficient -> round(coefficient, 6), result.coefficients) AS coefficients\nFROM\n(\n    SELECT timeSeriesLaggedLinearRegression(1)(timestamp, value) AS result\n    FROM values('timestamp UInt64, value Float64', (4, 31.), (0, 1.), (3, 15.), (1, 3.), (2, 7.))\n);",
+   "documented": "1\t[2]",
+   "detail": ""
+  },
+  {
+   "id": "AggregateFunction/timeSeriesLjungBoxTest#0",
+   "type": "Aggregate Function",
+   "name": "timeSeriesLjungBoxTest",
+   "source": "src/AggregateFunctions/TimeSeries/AggregateFunctionTimeSeriesDiagnostics.cpp",
+   "status": "ok",
+   "known": "",
+   "verdict": "ok",
+   "query": "SET enable_time_series_aggregate_functions = 1;\nSELECT\n    round(test.statistic, 6) AS statistic,\n    round(test.p_value, 6) AS p_value\nFROM\n(\n    SELECT timeSeriesLjungBoxTest(2)(timestamp, value) AS test\n    FROM values('timestamp UInt64, value Float64', (4, 5.), (1, 2.), (3, 4.), (0, 1.), (2, 3.))\n);",
+   "documented": "1.516667\t0.468447",
+   "detail": ""
+  },
+  {
+   "id": "AggregateFunction/timeSeriesMeanShiftChangePoint#0",
+   "type": "Aggregate Function",
+   "name": "timeSeriesMeanShiftChangePoint",
+   "source": "src/AggregateFunctions/TimeSeries/AggregateFunctionTimeSeriesStatisticalExtensions.cpp",
+   "status": "ok",
+   "known": "",
+   "verdict": "ok",
+   "query": "SET enable_time_series_aggregate_functions = 1;\nSELECT\n    result.split_index,\n    round(result.score, 6) AS score,\n    round(result.mean_before, 6) AS mean_before,\n    round(result.mean_after, 6) AS mean_after,\n    round(result.sse, 6) AS sse\nFROM\n(\n    SELECT timeSeriesMeanShiftChangePoint(1)(timestamp, value) AS result\n    FROM values('timestamp UInt64, value Float64', (5, 10.), (0, 0.), (3, 10.), (1, 0.), (4, 10.), (2, 0.))\n);",
+   "documented": "3\t1\t0\t10\t0",
+   "detail": ""
+  }
+ ],
+ "stale": [
+  "Function/generateULID#0",
+  "Function/generateULID#1"
+ ]
+}

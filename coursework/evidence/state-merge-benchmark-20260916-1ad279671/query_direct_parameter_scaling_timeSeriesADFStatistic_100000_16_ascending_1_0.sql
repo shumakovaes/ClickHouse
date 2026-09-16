@@ -1,0 +1,1 @@
+SELECT timeSeriesADFStatistic(16, 'constant', 1000000)(toUInt64(number), toFloat64(cityHash64(number) % 1000003) / 1000003.0) FROM numbers(100000) SETTINGS enable_time_series_aggregate_functions = 1, max_threads = 1

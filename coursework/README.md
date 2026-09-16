@@ -31,6 +31,12 @@ All seven APIs store `(timestamp, Float64 value)` samples and canonicalize by ti
 | [evidence/benchmarks](evidence/benchmarks/) | Python state-design benchmark and captured outputs. |
 | [evidence/native-benchmark](evidence/native-benchmark/) | Executed native ClickHouse benchmark, raw TSV data, metadata, and summary. |
 | [evidence/native-validation](evidence/native-validation/) | Native build, SQL/Distributed, smoke, and focused GoogleTest evidence. |
+| `evidence/native-acceptance-20260916-58b61c3a/` | Final Release-linked 38-test and four-fixture acceptance ledger with commands, configs, logs, hashes, and binary identity. |
+| `evidence/native-benchmark-20260916-58b61c3a/` | Final 92-row native Release timing grid, including KPSS work-cap and change-point scaling boundaries. |
+| `evidence/state-merge-benchmark-20260916-1ad279671/` | Direct, serialized-state, and merge/finalization measurements: 123, 192, and 96 rows respectively. |
+| `evidence/debug-gtest-20260916-1ad279671/` | Exact Debug focused run: 38/38 tests passed. |
+| `evidence/docs-examples-20260916-1ad279671/` | Generated-documentation example runner: all seven selected examples passed. |
+| `evidence/pdf-build-20260916-1ad279671-v2/` | Final technical report build: LaTeX/BibTeX logs, warning scan, toolchain record, and SHA-256. |
 | [evidence/standalone-validation](evidence/standalone-validation/) | Exact optimized and ASan/UBSan run record for the quarantined standalone comparison. |
 | [evidence/trusted-reference](evidence/trusted-reference/) | Isolated NumPy/SciPy/statsmodels reference-suite validation record. |
 | [research](research/) | Design, ordering, mergeability, implementation, inventory, and citation notes. |
@@ -55,9 +61,10 @@ Independent evidence and reproduction artifacts are:
 
 * `reference/python/extensions.py` and `reference/python/test_extensions.py` — independent batch oracles and tests for the four statistical contracts.
 * `evidence/experiments/run_extension_experiments.py` — seeded AR, ADF, KPSS, and mean-shift experiment runner; the final provenance-complete LF-normalized output is under `evidence/experiments/extension_results_20260915_final_v4_trusted/`.
-* `evidence/benchmarks/benchmark_extensions.py` — bounded Python-oracle benchmark; `evidence/benchmarks/extensions-20260915/{results.csv,results.json,summary.md}` are the recorded outputs.
-* `build/run_extension_benchmark.sh` — native benchmark harness, requiring an explicitly supplied Release `clickhouse` binary; no native benchmark result is claimed by this bundle.
-* `manuscript/report.md`, `manuscript/report.tex`, and `manuscript/report.pdf` — report source and rendered submission covering the seven APIs and the pending native acceptance ledger.
+* `evidence/benchmarks/benchmark_extensions.py` — bounded Python-oracle benchmark; `evidence/benchmarks/extensions-20260916-final/{results.csv,results.json,summary.md}` contains 90 fresh timed samples.
+* `evidence/experiments/run_baseline_sensitivity_experiments.py` — fixed-seed ACF/Ljung--Box sensitivity runner; `evidence/experiments/baseline_sensitivity_20260916_final/` contains 12,000 ACF and 1,800 Ljung--Box raw rows plus summaries and hashes.
+* `build/run_extension_native_acceptance.sh`, `build/run_extension_benchmark.sh`, and `build/run_extension_state_merge_benchmark.sh` — the executed Release acceptance and benchmark harnesses; each evidence directory retains the exact runner copy and checksum.
+* `manuscript/report.md`, `manuscript/report.tex`, and `manuscript/report.pdf` — report source and visually inspected 11-page submission covering the seven APIs and the completed local acceptance ledger.
 
 ## Reproduction and validation status
 
@@ -79,11 +86,18 @@ cases; its process-startup-dominated results are reported without a
 production-throughput claim. These archived counts predate the four extension
 APIs and are not extension acceptance evidence.
 
-Extension acceptance remains pending: no Release build/gtest/SQL or
-Distributed execution, required CI result, or native Release benchmark result
-is claimed here. The Python oracle, seeded experiments, and Python benchmark
-are independent reference evidence only; they do not establish native
-compilation, linkage, dispatch, serialization, or CI success.
+Extension local acceptance completed on 2026-09-16. The exact Release binary
+for revision `58b61c3a0f3ab17dddc0507657aca3934b179538` passed **38/38**
+focused GoogleTests and **4/4** SQL fixtures (`05161`--`05164`) with no skips;
+the latter includes real two-shard `Distributed` execution, cross-shard
+duplicate rejection, and `AggregatingMergeTree` persistence. A current Debug
+binary at revision `1ad279671de9cdda088fb64046d6ae1d4e7f854f` independently
+passed the same **38/38** tests. The Release benchmark recorded **92** timing
+rows; the supplemental run recorded **123** direct, **192** state-size, and
+**96** merge rows. All seven generated pages passed generator drift checks and
+their embedded examples passed **7/7**. The required remote GitHub CI remains
+**BLOCKED**, not passed: the fork exposes no runnable workflow/run set or
+compatible self-hosted runner. Local results are not represented as remote CI.
 
 The native source is intended for integration under `src/AggregateFunctions/TimeSeries`; the checkout used to prepare this package already contains that implementation and its factory-registration change. The standalone comparison code is not a substitute for native validation and is quarantined under `comparison/` for that reason.
 
