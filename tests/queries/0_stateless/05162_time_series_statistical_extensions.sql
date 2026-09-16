@@ -14,6 +14,7 @@ FROM values('key UInt64, value Float64', (0, 1.), (1, 2.)); -- { serverError UNK
 SET enable_time_series_aggregate_functions = 1;
 SET max_threads = 1;
 SET max_block_size = 2;
+SET print_pretty_type_names = 0;
 
 SELECT '--- timestamp and value dispatch ---';
 SELECT toTypeName(timeSeriesKPSSTest('level', 0)(timestamp, value)),

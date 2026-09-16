@@ -581,9 +581,9 @@ run_sql_fixture() {
     start=$(date +%s)
     set +e
     if [[ -x "$SQL_RUNNER" ]]; then
-        (cd "$REPO_DIR" && CLICKHOUSE_HOST=127.0.0.1 CLICKHOUSE_PORT_TCP="$PORT_ARG" CLICKHOUSE_PORT_HTTP="$HTTP_PORT_ARG" CLICKHOUSE_CONFIG="$runtime_root/config/config.xml" CLICKHOUSE_CONFIG_CLIENT="$runtime_root/config/client.xml" "$SQL_RUNNER" -q tests/queries -b "$CLICKHOUSE_BINARY" --configserver "$runtime_root/config/config.xml" --configclient "$runtime_root/config/client.xml" --no-long --no-random-settings -j 1 "$fixture") 2>&1 | tee "$OUTPUT_DIR/$log"
+        (cd "$REPO_DIR" && CLICKHOUSE_HOST=127.0.0.1 CLICKHOUSE_PORT_TCP="$PORT_ARG" CLICKHOUSE_PORT_HTTP="$HTTP_PORT_ARG" CLICKHOUSE_CONFIG="$runtime_root/config/config.xml" CLICKHOUSE_CONFIG_CLIENT="$runtime_root/config/client.xml" "$SQL_RUNNER" -q tests/queries -b "$CLICKHOUSE_BINARY" --configserver "$runtime_root/config/config.xml" --configclient "$runtime_root/config/client.xml" --no-long --no-random-settings --shard -j 1 "$fixture") 2>&1 | tee "$OUTPUT_DIR/$log"
     else
-        (cd "$REPO_DIR" && CLICKHOUSE_HOST=127.0.0.1 CLICKHOUSE_PORT_TCP="$PORT_ARG" CLICKHOUSE_PORT_HTTP="$HTTP_PORT_ARG" CLICKHOUSE_CONFIG="$runtime_root/config/config.xml" CLICKHOUSE_CONFIG_CLIENT="$runtime_root/config/client.xml" bash "$SQL_RUNNER" -q tests/queries -b "$CLICKHOUSE_BINARY" --configserver "$runtime_root/config/config.xml" --configclient "$runtime_root/config/client.xml" --no-long --no-random-settings -j 1 "$fixture") 2>&1 | tee "$OUTPUT_DIR/$log"
+        (cd "$REPO_DIR" && CLICKHOUSE_HOST=127.0.0.1 CLICKHOUSE_PORT_TCP="$PORT_ARG" CLICKHOUSE_PORT_HTTP="$HTTP_PORT_ARG" CLICKHOUSE_CONFIG="$runtime_root/config/config.xml" CLICKHOUSE_CONFIG_CLIENT="$runtime_root/config/client.xml" bash "$SQL_RUNNER" -q tests/queries -b "$CLICKHOUSE_BINARY" --configserver "$runtime_root/config/config.xml" --configclient "$runtime_root/config/client.xml" --no-long --no-random-settings --shard -j 1 "$fixture") 2>&1 | tee "$OUTPUT_DIR/$log"
     fi
     local -a pipeline_status=("${PIPESTATUS[@]}")
     set -e
@@ -599,7 +599,7 @@ run_sql_fixture() {
         OVERALL_RC=1
     fi
     record_command "sql-$fixture" "$command_rc" "$started" "$finished" "$elapsed" "$log" \
-        "CLICKHOUSE_HOST=127.0.0.1 CLICKHOUSE_PORT_TCP=$PORT_ARG CLICKHOUSE_PORT_HTTP=$HTTP_PORT_ARG tests/clickhouse-test --configserver $runtime_root/config/config.xml --configclient $runtime_root/config/client.xml -q tests/queries -b $CLICKHOUSE_BINARY --no-long --no-random-settings -j 1 $fixture"
+        "CLICKHOUSE_HOST=127.0.0.1 CLICKHOUSE_PORT_TCP=$PORT_ARG CLICKHOUSE_PORT_HTTP=$HTTP_PORT_ARG tests/clickhouse-test --configserver $runtime_root/config/config.xml --configclient $runtime_root/config/client.xml -q tests/queries -b $CLICKHOUSE_BINARY --no-long --no-random-settings --shard -j 1 $fixture"
     record_ledger sql "$fixture" "$status" "$command_rc" "$tee_rc" "$started" "$finished" "$elapsed" "$log" 'one fixture per log; one isolated server; pipefail pipeline'
 }
 

@@ -26,7 +26,7 @@ SELECT 0,
        timeSeriesKPSSTestState('level', 0)(key, value),
        timeSeriesMeanShiftChangePointState(2)(key, value)
 FROM values('key UInt64, value Float64',
-    (0, 1.), (2, 4.), (4, 16.));
+    (0, 1.), (2, 1.2), (4, 1.4));
 INSERT INTO time_series_statistical_extensions_mt
 SELECT 0,
        timeSeriesLaggedLinearRegressionState(1)(key, value),
@@ -34,25 +34,25 @@ SELECT 0,
        timeSeriesKPSSTestState('level', 0)(key, value),
        timeSeriesMeanShiftChangePointState(2)(key, value)
 FROM values('key UInt64, value Float64',
-    (1, 2.), (3, 8.), (5, 32.));
+    (1, 1.5), (3, 1.8), (5, 2.));
 
 SELECT '--- unmerged parts and merged aggregate states ---';
 SELECT count() FROM time_series_statistical_extensions_mt;
 SELECT
-    timeSeriesLaggedLinearRegressionMerge(1)(regression) = (SELECT timeSeriesLaggedLinearRegression(1)(key, value) FROM values('key UInt64, value Float64', (0, 1.), (1, 2.), (2, 4.), (3, 8.), (4, 16.), (5, 32.))),
-    timeSeriesADFStatisticMerge(0, 'constant')(adf) = (SELECT timeSeriesADFStatistic(0, 'constant')(key, value) FROM values('key UInt64, value Float64', (0, 1.), (1, 2.), (2, 4.), (3, 8.), (4, 16.), (5, 32.))),
-    timeSeriesKPSSTestMerge('level', 0)(kpss) = (SELECT timeSeriesKPSSTest('level', 0)(key, value) FROM values('key UInt64, value Float64', (0, 1.), (1, 2.), (2, 4.), (3, 8.), (4, 16.), (5, 32.))),
-    timeSeriesMeanShiftChangePointMerge(2)(change_point) = (SELECT timeSeriesMeanShiftChangePoint(2)(key, value) FROM values('key UInt64, value Float64', (0, 1.), (1, 2.), (2, 4.), (3, 8.), (4, 16.), (5, 32.)))
+    timeSeriesLaggedLinearRegressionMerge(1)(regression) = (SELECT timeSeriesLaggedLinearRegression(1)(key, value) FROM values('key UInt64, value Float64', (0, 1.), (1, 1.5), (2, 1.2), (3, 1.8), (4, 1.4), (5, 2.))),
+    timeSeriesADFStatisticMerge(0, 'constant')(adf) = (SELECT timeSeriesADFStatistic(0, 'constant')(key, value) FROM values('key UInt64, value Float64', (0, 1.), (1, 1.5), (2, 1.2), (3, 1.8), (4, 1.4), (5, 2.))),
+    timeSeriesKPSSTestMerge('level', 0)(kpss) = (SELECT timeSeriesKPSSTest('level', 0)(key, value) FROM values('key UInt64, value Float64', (0, 1.), (1, 1.5), (2, 1.2), (3, 1.8), (4, 1.4), (5, 2.))),
+    timeSeriesMeanShiftChangePointMerge(2)(change_point) = (SELECT timeSeriesMeanShiftChangePoint(2)(key, value) FROM values('key UInt64, value Float64', (0, 1.), (1, 1.5), (2, 1.2), (3, 1.8), (4, 1.4), (5, 2.)))
 FROM time_series_statistical_extensions_mt;
 
 SYSTEM START MERGES time_series_statistical_extensions_mt;
 OPTIMIZE TABLE time_series_statistical_extensions_mt FINAL;
 SELECT count() FROM time_series_statistical_extensions_mt;
 SELECT
-    finalizeAggregation(regression) = (SELECT timeSeriesLaggedLinearRegression(1)(key, value) FROM values('key UInt64, value Float64', (0, 1.), (1, 2.), (2, 4.), (3, 8.), (4, 16.), (5, 32.))),
-    finalizeAggregation(adf) = (SELECT timeSeriesADFStatistic(0, 'constant')(key, value) FROM values('key UInt64, value Float64', (0, 1.), (1, 2.), (2, 4.), (3, 8.), (4, 16.), (5, 32.))),
-    finalizeAggregation(kpss) = (SELECT timeSeriesKPSSTest('level', 0)(key, value) FROM values('key UInt64, value Float64', (0, 1.), (1, 2.), (2, 4.), (3, 8.), (4, 16.), (5, 32.))),
-    finalizeAggregation(change_point) = (SELECT timeSeriesMeanShiftChangePoint(2)(key, value) FROM values('key UInt64, value Float64', (0, 1.), (1, 2.), (2, 4.), (3, 8.), (4, 16.), (5, 32.)))
+    finalizeAggregation(regression) = (SELECT timeSeriesLaggedLinearRegression(1)(key, value) FROM values('key UInt64, value Float64', (0, 1.), (1, 1.5), (2, 1.2), (3, 1.8), (4, 1.4), (5, 2.))),
+    finalizeAggregation(adf) = (SELECT timeSeriesADFStatistic(0, 'constant')(key, value) FROM values('key UInt64, value Float64', (0, 1.), (1, 1.5), (2, 1.2), (3, 1.8), (4, 1.4), (5, 2.))),
+    finalizeAggregation(kpss) = (SELECT timeSeriesKPSSTest('level', 0)(key, value) FROM values('key UInt64, value Float64', (0, 1.), (1, 1.5), (2, 1.2), (3, 1.8), (4, 1.4), (5, 2.))),
+    finalizeAggregation(change_point) = (SELECT timeSeriesMeanShiftChangePoint(2)(key, value) FROM values('key UInt64, value Float64', (0, 1.), (1, 1.5), (2, 1.2), (3, 1.8), (4, 1.4), (5, 2.)))
 FROM time_series_statistical_extensions_mt;
 
 DROP TABLE time_series_statistical_extensions_mt;
