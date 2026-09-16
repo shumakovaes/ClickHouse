@@ -7,9 +7,11 @@ tests or to an explicitly recorded gap. The extension sources and test
 fixtures are present in the working tree. The final local Release and Debug
 evidence records 38/38 focused native tests, 4/4 functional SQL fixtures
 (including Distributed and AggregatingMergeTree paths), and the dedicated
-documentation and benchmark checks. Remote CI is blocked by runner/workflow
-availability and is reported separately rather than being inferred from local
-execution.
+documentation and benchmark checks. Draft PR `#1` is mergeable/clean, but the
+inherited workflow admits only `master` as its base while this PR correctly
+targets `coursework/mergeable-time-series-statistics`; the fork also has zero
+self-hosted runners. Remote CI is therefore blocked and reported separately
+rather than being inferred from local execution.
 
 ## Evidence inventory
 
@@ -123,8 +125,10 @@ The following are intentionally not reported as covered:
 * instrumented line/branch percentages for ClickHouse or the new translation
   unit;
 * required remote CI jobs; local execution is not remote-CI evidence. The
-  configured workflow currently cannot run the full required remote runner
-  matrix, so CI remains BLOCKED pending runner/workflow intervention;
+  configured PR workflow admits only `master` as its base, not the coursework
+  base branch, and the fork has zero registered self-hosted runners. CI remains
+  BLOCKED pending a base-branch workflow change plus runner provisioning, or an
+  explicitly authorized minimal GitHub-hosted workflow;
 * exhaustive platform/compiler/allocation/resource matrices beyond the recorded
   Linux Release and Debug runs, and exhaustive scalar-width coverage;
 * direct invocation of every internal unknown-name and `Field::tryGet`

@@ -95,9 +95,12 @@ binary at revision `1ad279671de9cdda088fb64046d6ae1d4e7f854f` independently
 passed the same **38/38** tests. The Release benchmark recorded **92** timing
 rows; the supplemental run recorded **123** direct, **192** state-size, and
 **96** merge rows. All seven generated pages passed generator drift checks and
-their embedded examples passed **7/7**. The required remote GitHub CI remains
-**BLOCKED**, not passed: the fork exposes no runnable workflow/run set or
-compatible self-hosted runner. Local results are not represented as remote CI.
+their embedded examples passed **7/7**. Draft PR
+[`#1`](https://github.com/shumakovaes/ClickHouse/pull/1) is mergeable and clean,
+but required remote CI remains **BLOCKED**, not passed: the inherited PR
+workflow admits only `master` as its base, whereas this PR correctly targets
+`coursework/mergeable-time-series-statistics`, and the fork has zero registered
+self-hosted runners. Local results are not represented as remote CI.
 
 The native source is intended for integration under `src/AggregateFunctions/TimeSeries`; the checkout used to prepare this package already contains that implementation and its factory-registration change. The standalone comparison code is not a substitute for native validation and is quarantined under `comparison/` for that reason.
 

@@ -57,7 +57,7 @@ therefore exact `O(n)` retained samples with canonical sorted union.
 | M9 | `AggregatingMergeTree` part merge, finalization, persistence, and duplicate failure | Complete: `05164` passes **1/1**, with two persisted parts and four expected errors |
 | M10 | Native acceptance ledger: Release configure/build, seven-API gtest, 05161--05164, Distributed, and `AggregatingMergeTree` raw logs | Complete under `evidence/native-acceptance-20260916-58b61c3a/`; all hashes verify |
 | M11 | Native Release benchmark with recorded resource/timing metadata | Complete: 92 main rows plus 123 direct, 192 state-size, and 96 merge rows |
-| M12 | Required remote CI jobs and generated/reference documentation check | Documentation complete (seven generator checks and 7/7 examples); remote CI **BLOCKED** because the fork has no runnable required workflow/run set or compatible runner |
+| M12 | Required remote CI jobs and generated/reference documentation check | Documentation complete (seven generator checks and 7/7 examples); remote CI **BLOCKED** because the PR workflow admits only `master` as its base, the PR correctly targets the coursework base branch, and the fork has zero registered self-hosted runners |
 
 ## Formula and implementation checkpoints
 
@@ -90,8 +90,10 @@ Local Release/Debug, SQL, Distributed, `AggregatingMergeTree`, benchmarks, and
 generated-documentation gates are closed by the 2026-09-16 evidence packages.
 Two limits remain explicit:
 
-* required remote GitHub CI is **BLOCKED** until workflows are enabled and
-  compatible runners are available; local execution is not remote-CI evidence;
+* required remote GitHub CI is **BLOCKED** until the base branch's PR workflow
+  admits `coursework/mergeable-time-series-statistics` and compatible
+  self-hosted runners are registered, or an explicitly authorized minimal
+  GitHub-hosted workflow is added; local execution is not remote-CI evidence;
 * exhaustive platform/allocation coverage (every toolchain, CPU, scalar
   conversion alternative, threshold neighborhood, and allocation failure) is
   outside the bounded coursework run.

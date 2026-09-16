@@ -175,5 +175,7 @@ The final local run uses a separate Release directory and records revision,
 submodule state, Clang 21/Ninja/CMake identity, exact commands, exit codes,
 durations, test counts, configs, resource measurements, and SHA-256 manifests.
 This supports a local Release-validation claim only. Required remote GitHub CI
-remains **BLOCKED** because the fork exposes no runnable required workflow/run
-set or compatible self-hosted runner; no full-CI claim is made.
+remains **BLOCKED**: draft PR `#1` is mergeable/clean, but the inherited
+workflow admits only `master` as its base while the PR correctly targets
+`coursework/mergeable-time-series-statistics`, and the fork has zero registered
+self-hosted runners. No full-CI claim is made.

@@ -266,7 +266,7 @@ blocked rather than being inferred from local execution.
 | Native extension benchmark | Release runner | **PASS**, 92 rows; `evidence/native-benchmark-20260916-58b61c3a/` |
 | Native state/merge benchmark | Release state runner | **PASS**, 123 direct + 192 state + 96 merge rows; `evidence/state-merge-benchmark-20260916-1ad279671/` |
 | Generated docs/examples | seven generator checks and focused example runner | **PASS 7/7**; `evidence/docs-examples-20260916-1ad279671/` |
-| Required remote CI | GitHub Actions | **BLOCKED**: the fork has no runnable required workflow/run set or compatible self-hosted runners |
+| Required remote CI | GitHub Actions, draft PR `#1` | **BLOCKED**: the PR is mergeable/clean, but `.github/workflows/pull_request.yml` admits only `master` as its base; this PR correctly targets `coursework/mergeable-time-series-statistics`, and the fork has zero registered self-hosted runners |
 | Technical report PDF | LaTeX, BibTeX, then two final LaTeX passes | **PASS**, 11 pages; SHA-256 `850412fbadc656e3474342cb0e14cb25ceb27fc0741798e1ef8bc725e4bcaf39`; `evidence/pdf-build-20260916-1ad279671-v2/` |
 
 An unrun, failed, skipped, or unsupported check remains visible as such; do
