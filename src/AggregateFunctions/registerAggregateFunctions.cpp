@@ -105,6 +105,7 @@ void registerAggregateFunctionLast2Samples(AggregateFunctionFactory & factory);
 void registerAggregateFunctionTimeseries(AggregateFunctionFactory & factory);
 void registerAggregateFunctionTimeseriesGroupArray(AggregateFunctionFactory & factory);
 void registerAggregateFunctionsTimeSeriesDiagnostics(AggregateFunctionFactory & factory);
+void registerAggregateFunctionsTimeSeriesStatisticalExtensions(AggregateFunctionFactory & factory);
 void registerAggregateFunctionTimeSeriesTopKMasks(AggregateFunctionFactory & factory);
 
 class AggregateFunctionCombinatorFactory;
@@ -224,6 +225,7 @@ void registerAggregateFunctions()
         registerAggregateFunctionTimeseries(factory);
         registerAggregateFunctionTimeseriesGroupArray(factory);
         registerAggregateFunctionsTimeSeriesDiagnostics(factory);
+        registerAggregateFunctionsTimeSeriesStatisticalExtensions(factory);
         registerAggregateFunctionTimeSeriesTopKMasks(factory);
 
         registerWindowFunctions(factory);

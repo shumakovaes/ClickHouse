@@ -1,0 +1,1 @@
+SELECT timeSeriesLaggedLinearRegression(4, 1000000)(toUInt64(number), toFloat64(cityHash64(number) % 1000003) / 1000003.0) FROM (SELECT number FROM numbers(100000) ORDER BY number DESC) SETTINGS enable_time_series_aggregate_functions = 1, max_threads = 1

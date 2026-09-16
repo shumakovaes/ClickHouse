@@ -1,5 +1,9 @@
 # Native ClickHouse validation
 
+> Archived baseline record: this directory contains historical three-API
+> evidence for the original coursework aggregates. It is not validation of
+> any later extension or additional API surface.
+
 This directory preserves the compact outputs from native validation on
 2026-09-10. The patched checkout and build directory were on the WSL2 ext4
 filesystem. The build was incremental from the recorded upstream revision,

@@ -1,0 +1,16 @@
+--- canonical reference ---
+1.778571	[-0.071429]
+-2.344895	-1.071429	7
+0.497716	0	8
+3	0.533407	1.233333	1.8	0.526667
+--- distributed aggregate merge across shards ---
+1.778571	[-0.071429]
+-2.344895	-1.071429	7
+0.497716	0	8
+3	0.533407	1.233333	1.8	0.526667
+--- serialized partial state merge through Distributed ---
+1.778571	[-0.071429]
+-2.344895	-1.071429	7
+0.497716
+3	0.533407
+--- duplicate key propagated from separate shards ---

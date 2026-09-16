@@ -1,0 +1,13 @@
+key	value
+source_revision	1ad279671de9cdda088fb64046d6ae1d4e7f854f
+cmake_build_type	Release
+server_version	26.9.1.1
+http_port	19009
+filter	^(timeSeriesADFStatistic|timeSeriesAutocorrelation|timeSeriesDurbinWatson|timeSeriesKPSSTest|timeSeriesLaggedLinearRegression|timeSeriesLjungBoxTest|timeSeriesMeanShiftChangePoint)$
+selected_entities	7
+selected_examples	7
+selected_ok	7
+selected_not_ok	0
+focused_known_failures	0
+status	PASS
+default_known_failures_note	The first focused run also had 7/7 selected examples OK, but exited 1 because the repository-wide default baseline contains two unrelated stale generateULID entries; its report and log are retained separately.

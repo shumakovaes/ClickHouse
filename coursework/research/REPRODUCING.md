@@ -1,5 +1,8 @@
 # Reproducing the exact keyed diagnostics
 
+> Archived baseline protocol: this document reproduces historical evidence for
+> the three original coursework APIs only. It is not extension validation.
+
 This protocol reproduces the evidence for the three implemented aggregates.
 The recorded run linked both the aggregate and unified ClickHouse targets,
 passed the focused native GoogleTest suite 15/15, and passed the stateless

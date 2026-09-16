@@ -1,0 +1,7 @@
+--- unmerged parts and merged aggregate states ---
+2
+1	1	1	1
+1
+1	1	1	1
+--- duplicate persisted states remain separate ---
+2

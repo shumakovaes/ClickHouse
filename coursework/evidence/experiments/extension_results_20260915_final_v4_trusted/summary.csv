@@ -1,0 +1,7 @@
+detrended_less_than_level_hit_rate,exact_hit_rate,experiment,fit_count,intercept_bias,intercept_rmse,level_less_than_walk_hit_rate,level_stationary_mean,mean_absolute_localization_error,p_value_claim,phi_1_bias,phi_1_rmse,phi_2_bias,phi_2_rmse,random_walk_mean,random_walk_mean_statistic,reps,scenario,stationary_mean_statistic,stationary_more_negative_hit_rate,trend_detrended_mean,trend_level_mean,undefined_count,within_tolerance,within_tolerance_hit_rate
+,,ar_recovery,120,0.0028540004889087353,0.034466922595200775,,,,,-0.007942183471597246,0.06385247126869181,,,,,120,ar1_phi_0.25_noise_0.2,,,,,0,,
+,,ar_recovery,120,0.009558372753475505,0.08916995883346712,,,,,-0.0072587282920521,0.051025146660004995,,,,,120,ar1_phi_0.70_noise_1.0,,,,,0,,
+,,ar_recovery,120,0.00449469142689075,0.0493197664267567,,,,,-0.0050701362064842995,0.062452691513933456,-0.007596252207663166,0.061536335699886674,,,120,ar2_phi_0.50_-0.25_noise_0.5,,,,,0,,
+,,adf_direction,,,,,,,none,,,,,,-1.569639433485452,120,,-7.768100468537278,1.0,,,,,
+1.0,,kpss_behavior,,,,0.9416666666666667,0.16799509221801895,,none,,,,,0.8644110007084524,,120,,,,0.0750291231142635,1.7031537189588404,,,
+,0.9083333333333333,mean_shift,,,,,,0.10833333333333334,,,,,,,,120,,,,,,,12,1.0

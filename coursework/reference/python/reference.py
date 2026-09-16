@@ -5,7 +5,7 @@ an oracle for implementations that use compact monoids: its `merge` operation
 has the same ordered/no-overlap contract, while every statistic is calculated
 directly from the merged observations.  That makes it suitable for property
 tests even when the implementation under test has a radically different state
-layout. `FullSampleKeyedStats` implements exactly the three production
+layout. `FullSampleKeyedStats` implements exactly the three baseline diagnostic
 finalizers: single-lag autocorrelation, Ljung--Box (Q and p-value), and
 Durbin--Watson. It accepts rows in any order and canonicalizes by UInt64 key.
 `OrderedStats` remains below only as a deliberately constrained research

@@ -1,0 +1,7 @@
+kind	name	status	command_exit_code	tee_exit_code	exit_code	started_utc	finished_utc	duration_seconds	log	details
+smoke	local	PASS	0	0	0	2026-09-16T14:53:13Z	2026-09-16T14:53:13Z	0	local-smoke.log	isolated local smoke
+gtest	focused	PASS	0	0	0	2026-09-16T14:53:14Z	2026-09-16T14:53:15Z	1	gtest-focused.log	expected_total=38 observed_total=38; expected_baseline=15 observed_baseline=15; expected_extension=23 observed_extension=23
+sql	05161_time_series_diagnostics	PASS	0	0	0	2026-09-16T14:53:15Z	2026-09-16T14:53:16Z	1	sql/05161_time_series_diagnostics.log	one fixture per log; one isolated server; pipefail pipeline
+sql	05162_time_series_statistical_extensions	PASS	0	0	0	2026-09-16T14:53:16Z	2026-09-16T14:53:17Z	1	sql/05162_time_series_statistical_extensions.log	one fixture per log; one isolated server; pipefail pipeline
+sql	05163_time_series_statistical_extensions_distributed	PASS	0	0	0	2026-09-16T14:53:17Z	2026-09-16T14:53:18Z	1	sql/05163_time_series_statistical_extensions_distributed.log	one fixture per log; one isolated server; pipefail pipeline
+sql	05164_time_series_statistical_extensions_aggregating_merge_tree	PASS	0	0	0	2026-09-16T14:53:18Z	2026-09-16T14:53:19Z	1	sql/05164_time_series_statistical_extensions_aggregating_merge_tree.log	one fixture per log; one isolated server; pipefail pipeline

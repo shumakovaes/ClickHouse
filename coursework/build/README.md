@@ -1,5 +1,10 @@
 # ClickHouse on WSL2: low-memory build helper
 
+> Historical-evidence note: the native validation and benchmark commands in
+> this guide document the archived three-API coursework baseline. They are not
+> extension validation; preserve their commands and results as baseline
+> reproduction material.
+
 This directory contains a helper for the available Windows host: WSL2 Ubuntu
 24.04.3, about 7.6 GiB of WSL memory and 2 GiB of swap. It does not modify a
 ClickHouse checkout until you explicitly run one of its actions. Package
@@ -170,7 +175,7 @@ match more than one case. Keep the pattern narrow. The helper never enables
 
 For a self-contained run from the ClickHouse repository root, the companion
 runner creates a guarded temporary configuration, starts an isolated server,
-executes the three-function local smoke and focused SQL/Distributed test, then
+executes a seven-function local smoke and the focused SQL/Distributed tests, then
 shuts the server down:
 
 ```bash

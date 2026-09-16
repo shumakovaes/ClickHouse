@@ -1,5 +1,9 @@
 # Trusted reference validation
 
+> Archived baseline record: this Python reference run supports the historical
+> three-API coursework evidence only. It is not validation of later extensions
+> or additional APIs.
+
 This record captures the isolated optional-dependency run of the Python
 reference suite. The virtual environment was created under
 `work/trusted_reference_venv`, outside this package, and no environment files

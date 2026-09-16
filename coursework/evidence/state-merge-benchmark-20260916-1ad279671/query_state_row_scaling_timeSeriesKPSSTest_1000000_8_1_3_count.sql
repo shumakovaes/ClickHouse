@@ -1,0 +1,1 @@
+SELECT count() FROM (SELECT timeSeriesKPSSTestState('trend', 8, 1000000)(toUInt64(number), toFloat64(cityHash64(number) % 1000003)) AS state FROM numbers(1000000) GROUP BY number % 1) SETTINGS enable_time_series_aggregate_functions = 1, max_threads = 1

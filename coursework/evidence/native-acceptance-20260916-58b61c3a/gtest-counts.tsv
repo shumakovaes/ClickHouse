@@ -1,0 +1,11 @@
+expected_total	38
+expected_baseline	15
+expected_extension	23
+filter	TimeSeriesDiagnosticsState.*:TimeSeriesStatisticalExtensionsState.*:TimeSeriesStatisticalExtensionsAggregate.*
+observed_total	38
+observed_passed	38
+observed_baseline	15
+observed_extension_state	8
+observed_extension_aggregate	15
+observed_extension	23
+run_status	PASS

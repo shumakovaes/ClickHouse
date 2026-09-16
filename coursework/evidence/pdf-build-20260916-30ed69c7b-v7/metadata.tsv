@@ -1,0 +1,6 @@
+status	PASS
+source_revision	30ed69c7b92fcf232a29814559162ceb824ffa37
+source_file_matches_revision	yes
+source	coursework/manuscript/report.tex
+output	coursework/manuscript/report.pdf
+pages	11

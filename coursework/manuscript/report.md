@@ -1,323 +1,337 @@
-# Exact, mergeable time-series diagnostics for ClickHouse
+# Exact, mergeable time-series statistics for ClickHouse
 
-**Academic coursework submission · 10 September 2026**
+**Academic coursework submission · continuation status: 16 September 2026**
 
 ## Abstract
 
-This coursework develops a narrowly scoped ClickHouse extension for three ordered diagnostics: autocorrelation at one requested lag, the Ljung-Box portmanteau test, and the Durbin-Watson statistic. The central engineering problem is not the final formulas but their interaction with parallel database aggregation. Arrival order, block boundaries, shard placement, and merge-tree parenthesization are execution details, whereas temporal order is part of the statistic. The proposed aggregate state therefore retains every accepted `(timestamp, value)` pair, imposes a canonical timestamp order, and merges two states by an exact sorted union. On unique keys this operation is associative, commutative, and has the empty state as identity. The resulting state is exact in its ordering semantics and uses `O(n)` memory, subject to an explicit sample cap; it is deliberately not presented as bounded-memory streaming.
+This coursework studies how order-dependent time-series statistics can be implemented as ordinary ClickHouse aggregate functions without depending on row arrival, block boundaries, shard placement, or merge-tree shape. The implementation retains every finite `(timestamp, value)` pair, sorts by a unique timestamp, and merges canonical states by exact sorted union. This gives a direct associative and commutative merge contract on valid disjoint-key inputs, at the explicit cost of `O(n)` persistent state.
 
-The implementation exposes exactly `timeSeriesAutocorrelation`, `timeSeriesLjungBoxTest`, and `timeSeriesDurbinWatson`. A midpoint/range coordinate transform protects the centered statistics, max-absolute-value scaling protects Durbin-Watson, and compensated sums reduce avoidable rounding error. With Clang 21 and `-Werror`, the production and registry translation units compile, the aggregate target completes 5,672/5,672 actions, and the unified ClickHouse target completes 1,167/1,167. The focused native state suite passes 15/15, while the stateless SQL fixture passes 1/1 against a running server, including a two-shard `Distributed` merge.
+The current source tree registers seven private-preview APIs: autocorrelation, the Ljung–Box test, Durbin–Watson, fixed-order lagged linear regression, a fixed-lag augmented Dickey–Fuller statistic, a KPSS statistic, and a one-mean-shift estimator. The four extensions deliberately return only quantities justified by their stated conventions: ADF and KPSS expose no p-values, while the change-point score is descriptive rather than calibrated. Regression uses a centered/scaled streaming Givens QR solver with explicit rank, conditioning, residual-resolution, and work guards. KPSS uses a function-local Bartlett bandwidth convention. Mean-shift finalization uses directly accumulated suffix moments to avoid cancellation.
 
-Independent Python artifacts provide the statistical evidence. For six synthetic processes with `n=300`, seed `20260910`, and 200 repetitions, the Ljung-Box 5% rejection rate is 0.065 for white noise and 1.000 for each of the five structured processes. A Python state microbenchmark reports exact-store-sort merge medians of 0.444 ms at 5,000 rows and 0.636 ms at 10,000 rows for 16 contiguous chunks and lag 64. A separate native Debug harness records 81 complete-process measurements through 50,000 rows: the largest cases take median 0.05--0.06 s, and a 50,000-sample serialized state occupies 800,018 bytes. Startup and 0.01-second timer resolution dominate those native timings, so they are engineering evidence rather than a production-throughput claim.
+Independent Python evidence, with seed `20260915`, `n=240`, and 120 repetitions, records coefficient recovery and directional diagnostic behavior. A separate Python-oracle benchmark measures only the batch reference algorithms and is not native ClickHouse performance evidence. Native evidence is recorded separately: Release and Debug focused GoogleTest both passed `38/38`; SQL fixtures `05161`–`05164` passed `4/4` with no skips; the Distributed and `AggregatingMergeTree` paths passed. The only unresolved acceptance layer is remote CI: it is explicitly **BLOCKED**, not reported as a pass.
 
-## 1. Introduction and research question
+## 1. Research question and scope
 
-ClickHouse is designed for parallel analytical execution over columnar data. Rows may be read from several parts, divided among threads, aggregated into partial states, exchanged between servers, and combined in an execution-dependent tree. These mechanisms are strengths of the system, but they invalidate a common time-series shortcut: treating physical row arrival as chronological order. MergeTree parts have their own ordering and are merged in the background; that storage order is not a promise that an aggregate receives one globally ordered stream [@schulze2024clickhouse; @clickhouse_mergetree_docs; @clickhouse_parts_docs].
+ClickHouse reads and combines data in parallel. Rows may arrive from several parts and shards, and partial aggregate states may be joined in different parenthesizations. Physical arrival order therefore cannot stand in for chronological order [@schulze2024clickhouse; @clickhouse_mergetree_docs; @clickhouse_parts_docs]. The research question is: *which ordered time-series statistics can be exposed as ordinary mergeable aggregates, under exactly what state and numerical contracts?*
 
-The research question is therefore: *how can a small set of ordered diagnostics be expressed as ordinary ClickHouse aggregate functions while remaining correct under arbitrary row, block, and state-merge order?* “Correct” has two components. First, every execution must recover the same canonical sequence of keyed values, or reject the same invalid logical input. Second, final floating-point formulas must avoid obvious overflow, underflow, and cancellation failures over the supported `Float64` domain. Exactness in this report refers to the first component and to evaluation of the stated formulas from all retained samples. It does not mean exact real arithmetic or bitwise-identical floating-point results on every platform.
-
-The contribution is intentionally bounded. It supplies one shared state and exactly three native aggregate APIs, together with a Python oracle, native unit fixtures, SQL functional cases, synthetic experiments, and a state-level microbenchmark. It does not add a forecasting library, stationarity suite, change-point detector, new storage engine, or planner contract. Compact lag states, AR(1) fitting, and KPSS calculations are retained only as exploratory work and negative evidence. This separation makes the coursework claim auditable: the production surface is small enough for its ordering, resource, serialization, and failure semantics to be stated completely.
-
-## 2. Investigated ClickHouse landscape
-
-### 2.1 Existing primitives
-
-The inspected ClickHouse checkout already contains a broad time-series substrate. General aggregates provide counts, sums, variances, correlations, quantiles, and simple regression. Arrays and windows provide sorting, differencing, folding, lag construction, and frame-aware `lagInFrame`. Regular time-series functions include STL decomposition, Tukey outlier scores, FFT period detection, and timestamp-range generation. A separate preview aggregate family provides grid resampling and PromQL-like rate, delta, derivative, reset, and linear-prediction operations. These capabilities make ClickHouse useful for feature preparation, but none of them establishes the merge contract needed by the three row-oriented diagnostics studied here.
-
-Two precedents are particularly close. First, `arrayAutocorrelation(array[, max_lag])`, introduced in version 26.4, computes normalized autocorrelation for an already materialized numeric array [@clickhouse_arrayautocorrelation]. It is the correct native baseline and must not be described as new work. Its caller, however, owns array construction and ordering, and its result is an array rather than an ordinary keyed aggregate state. The present autocorrelation API contributes a different contract: two row arguments, one requested lag, explicit timestamp semantics, and normal `-State`/`-Merge` use alongside the other two diagnostics.
-
-Second, preview aggregate `timeSeriesGroupArray` stores timestamp/value samples, sorts them, and applies an explicit duplicate rule. Its implementation demonstrates relevant ClickHouse conventions: fast append paths, sorted-state merging, versioned serialization, factory registration, documentation metadata, and the feature setting `enable_time_series_aggregate_functions` [@clickhouse_timeseriesgrouparray_docs; @clickhouse_timeseriesgrouparray_source]. The new state follows this architectural precedent but rejects duplicate timestamps. Selecting the numerically greatest duplicate, as the precedent does, would silently alter the statistical sample and is not appropriate for these diagnostics.
-
-### 2.2 Why this remains a justified coursework problem
-
-The inspected source and documentation contain no first-class KPSS/ADF stationarity test, general fitted ARMA family, residual diagnostic suite, or statistical change-point estimator. ClickHouse's current intern-task record also identifies statistical aggregate or window functions for stationarity, breakpoints, and prediction as an open area [@clickhouse_issue87836]. Older experimental smoothing and Holt/Holt-Winters pull requests show useful design work, but the research notes do not establish their upstream inclusion or production validation. Accordingly, this report does not claim novelty for autocorrelation as a mathematical operation. Its narrower contribution is a coherent aggregate-state contract, the addition of two related diagnostics, and evidence about which exact ordered summaries do and do not merge under ordinary database execution.
-
-This distinction also determines the implementation layer. A window function could rely on a specified frame order but would produce a result at many rows. A scalar array pipeline would require users to materialize and order the full series before calling a function. An aggregate function naturally produces one diagnostic per SQL group and participates in ClickHouse's state combinators and `AggregatingMergeTree`. The cost is that its state must be valid under the merge plans allowed for ordinary aggregation. That cost is made explicit, rather than hidden behind an arrival-order assumption.
-
-## 3. Semantic contract and candidate architectures
-
-A logical series is one SQL group. Each accepted row supplies a key `t` and numeric value `x`. The key is a timestamp or an explicit sequence coordinate; elapsed-time spacing is not inferred. After sorting, the series is
+For one SQL group, a valid logical series is
 
 \[
-X=((t_0,x_0),\ldots,(t_{n-1},x_{n-1})),
-\qquad t_0<t_1<\cdots<t_{n-1}.
+X=((t_0,x_0),\ldots,(t_{n-1},x_{n-1})),\qquad
+t_0<t_1<\cdots<t_{n-1},
 \]
 
-Arrival order within a block, the order in which blocks are consumed, and the shape in which partial states are combined have no temporal meaning. Duplicate keys are invalid because there is no stable, domain-independent tie rule.
+where every value is finite and every key is unique. `timestamp` is an ordering key, not a duration. Lags count positions after sorting; unequal gaps, time zones, and calendar effects are ignored. A caller who needs equally spaced AR, ADF, or KPSS inference must resample first. Rows with a NULL argument are skipped by ClickHouse's nullable combinator, which can itself change positional spacing.
 
-Four designs were considered:
+The common `max_samples` parameter defaults to 1,000,000 and is limited to 10,000,000. Exceeding it is an error rather than truncation. The state is exact with respect to the retained canonical series but is not bounded-memory streaming and does not imply exact real arithmetic.
 
-1. An array pipeline reuses native `arrayAutocorrelation`, but it does not expose a keyed state and still needs explicit ordered materialization.
-2. A compact boundary state stores moments and at most a fixed number of prefix/suffix values. It can concatenate already ordered adjacent ranges, but cannot accept arbitrary interleaving merges.
-3. A precomputed-lag design asks an upstream operator to supply globally correct lag columns, after which scalar or matrix sums merge cheaply. This is valid, but it is a different API.
-4. An exact store-sort state retains all keyed samples and canonicalizes them at state boundaries. Only this design satisfies the chosen API without an additional planner or producer contract.
+## 2. State, merge law, and compact-state NO-GO decision
 
-The selected contract is strict by design. Values must be finite. Keys must be unique. The configurable `max_samples` is positive, defaults to 1,000,000, and cannot exceed the hard ceiling of 10,000,000. The hard lag limit is 10,000. Violations are errors, not requests to truncate, sample, or silently deduplicate. Rows containing a NULL argument are handled by ClickHouse's nullable aggregate combinator and are skipped before reaching the state. These rules keep a serialized or merged state semantically equivalent to a valid one-shot input.
+The shared state stores all `(timestamp, Float64)` records. `add` appends in amortized `O(1)` time and marks out-of-order input dirty. Before merge, serialization, or finalization, a dirty vector is sorted and duplicate keys are rejected. Two canonical vectors are joined by a two-pointer sorted union in `O(n_1+n_2)` work. The serialized extension envelope identifies the finalizer and its constant parameters; the delegated sample payload remains versioned and carries the sample cap.
 
-## 4. Mergeability taxonomy and negative result
-
-### 4.1 Not every statistic needs the same state
-
-The research inventory separates several algebraic classes. Additive scalar statistics such as count and sum have fixed-size commutative states. Fixed-size moments and covariance matrices also merge through sufficient statistics, although stable floating-point reduction needs care [@chan1982; @chan1983; @pebay2008]. Fixed top-k summaries retain a bounded order frontier. Prefix automata may be summarized by a finite transition object, but their composition is generally ordered and non-commutative. Exact ranks, arbitrary prefix outputs, general recursive latent-state inference, iterative ARMA optima, and unconstrained change-point dynamic programming require a state whose information grows with the input, unless the problem is weakened or an additional theorem applies.
-
-Lag statistics occupy an instructive middle ground. Once correct lagged pairs have been constructed, their cross-products are additive. Constructing those pairs across arbitrary partitions is the difficult part. A state containing only the first and last `H` values can repair one boundary between two adjacent, ordered ranges, but ordinary aggregate merging does not promise that the first two states combined are adjacent. Thus a compact state may be perfectly valid for a specialized ordered operator while remaining invalid as an ordinary commutative aggregate. Aggregate-state algebra, not the convenience of a local loop, determines distributed correctness [@gray1997datacube].
-
-### 4.2 The disjoint-envelope counterexample
-
-Consider singleton states with keys 1, 3, and 2. A merge plan may first combine keys 1 and 3. If a compact state collapses these rows to an outer envelope `[1,3]` and retains only boundary payload, the later key 2 falls inside a hole that the envelope no longer represents. For the exact lag-one transition sum
-
-\[
-T(X)=\sum_{i=1}^{n-1}x_{i-1}x_i,
-\]
-
-the two-row sequence with keys `(1,3)` contributes `x_1 x_3`, while the completed sequence `(1,2,3)` contributes `x_1 x_2 + x_2 x_3`. After information about the hole has been discarded, no boundary-only rule can know whether to replace an assumed `1 -> 3` transition or insert two transitions. Values can be chosen so that any fixed guess fails.
-
-Disjointness therefore does not imply adjacency, and an envelope family is not closed under arbitrary merge trees. Retaining every disjoint subrange repairs closure, but in the worst case there is one subrange per row, giving `O(n)` state. The alternatives are legitimate but change the contract: precompute lags globally, require a planner to merge adjacent intervals in order, or accept an approximation with a stated error bound. None is silently substituted here. The compact `O(H)` prototype remains useful as a negative control for contiguous ranges, but it is neither registered nor used to support production claims.
-
-## 5. Chosen exact state and merge proof
-
-### 5.1 Representation and transitions
-
-For a fixed aggregate instance, the state contains a vector of `(timestamp, Float64)` records and a flag indicating whether the vector is already sorted. The instance owns the statistic parameters; the wire format stores a format version, `max_samples`, record count, and canonical records. `add` checks the limit and finiteness, appends in amortized `O(1)` time, and marks the vector dirty when the new key does not exceed the current tail. Before finalization, serialization, or merging, a dirty state is sorted and adjacent equal keys are rejected.
-
-To merge two states, both are canonicalized and validated. A two-pointer union then copies the lesser key and rejects equality. The work and temporary space are `O(n_1+n_2)`. A state that is already in order avoids sorting; an arbitrary arrival permutation pays `O(n log n)` once at canonicalization. Serializing only canonical states makes equivalent inputs produce the same logical wire content. Deserialization validates the version and configured cap, bounds the count before reading records, initially reserves at most 4,096 elements, rejects non-finite values, and requires strictly increasing keys. The limited initial reservation prevents a truncated payload from forcing allocation of its entire claimed size.
-
-### 5.2 Associativity, commutativity, and identity
-
-Let `D` be the set of valid finite maps from supported keys to finite `Float64` values whose cardinality does not exceed the configured cap. Let `C(S)` denote the unique vector obtained by listing map `S` in increasing key order. For maps with disjoint key sets, define
+For finite maps with disjoint keys, let `C(S)` be their unique increasing-key representation and define
 
 \[
 S\oplus T=C(S\cup T).
 \]
 
-Set union is associative and commutative, and sorting a finite map by a total key order has one unique result. Therefore, whenever the union stays within the cap,
+Because set union is associative and commutative and canonical sorting is unique,
 
 \[
 (S\oplus T)\oplus U=S\oplus(T\oplus U),\qquad
 S\oplus T=T\oplus S,
 \]
 
-and `S \oplus empty = S`. The implementation's two-pointer algorithm is an efficient realization of `C(S union T)`, not a different operation.
+with the empty state as identity. Duplicate keys and cap overflow make the operation deliberately partial: any complete merge tree must eventually reject the same invalid logical union.
 
-The operator is intentionally partial on invalid data. If any pair of input states shares a key, every complete merge tree must eventually bring those two records into one state and raise a duplicate-key error. If the total count exceeds the cap, every complete tree must likewise fail, although it may fail at a different internal node. Thus valid inputs have tree-independent canonical results, and invalid logical unions have tree-independent acceptance semantics. Finalization is a deterministic function of the canonical vector. It follows that row permutation, block partitioning, merge operand order, and merge-tree parenthesization cannot change the mathematical sample used by a diagnostic.
+### 2.1 Why a compact boundary state is a NO-GO ordinary aggregate
 
-This proof does not claim bitwise associativity of floating-point addition. Because finalization scans one canonical vector, its principal accumulation order is fixed after merge. Platform math libraries used for the chi-square survival function may still differ at the last bits, and acceptance tests must use scale-aware tolerances rather than universal bitwise equality.
+The project ADR rejects a general `O(H)` prefix/suffix envelope for ordinary ClickHouse aggregation. Consider singleton states with keys `1`, `3`, and `2`. ClickHouse may merge `1` and `3` first. If that state forgets the interior and keeps only an envelope, it cannot later know that inserting key `2` must replace the apparent transition `1 -> 3` by `1 -> 2` and `2 -> 3`. For the lag-one product sum
 
-## 6. Statistical definitions and public API
+\[
+T(X)=\sum_{i=1}^{n-1}x_{i-1}x_i,
+\]
 
-The production interface consists of exactly the following parameterized aggregate signatures:
+the missing cross-boundary terms depend on information already discarded. Disjoint ranges are not necessarily adjacent, and keeping every disjoint subrange degenerates to `O(n)` in the worst case.
+
+A compact design would be valid only if a specialized execution operator guaranteed complete adjacent ranges, canonical left-to-right composition, and preservation of those conditions across spills, retries, remote aggregation, persisted states, and final coordinator merges. The ordinary aggregate interface provides none of these guarantees. Therefore no compact alternative is registered, exposed through `-State`/`-Merge`, or used to justify the seven APIs. This is a design decision, not an unfinished optimization.
+
+## 3. Public API
+
+All seven functions are private-preview parameterized aggregates over `(timestamp, value)`:
 
 ```text
-timeSeriesAutocorrelation(lag[, max_samples])(timestamp, value) -> Float64
+timeSeriesAutocorrelation(lag[, max_samples])(timestamp, value)
+  -> Float64
 timeSeriesLjungBoxTest(max_lag[, model_df[, max_samples]])(timestamp, value)
-    -> Tuple(statistic Float64, p_value Float64)
-timeSeriesDurbinWatson([max_samples])(timestamp, value) -> Float64
+  -> Tuple(statistic Float64, p_value Float64)
+timeSeriesDurbinWatson([max_samples])(timestamp, value)
+  -> Float64
+timeSeriesLaggedLinearRegression(order[, max_samples])(timestamp, value)
+  -> Tuple(intercept Float64, coefficients Array(Float64))
+timeSeriesADFStatistic(augmentation_lags[, deterministic[, max_samples]])(timestamp, value)
+  -> Tuple(statistic Float64, coefficient Float64, observations UInt64)
+timeSeriesKPSSTest(regression[, bandwidth[, max_samples]])(timestamp, value)
+  -> Tuple(statistic Float64, bandwidth UInt64, observations UInt64)
+timeSeriesMeanShiftChangePoint(min_segment[, max_samples])(timestamp, value)
+  -> Tuple(split_index UInt64, score Float64, mean_before Float64,
+           mean_after Float64, sse Float64)
 ```
 
-The timestamp argument accepts `UInt32`, `UInt64`, `DateTime`, and `DateTime64`. Native integer and floating-point values are converted to `Float64`; Decimal is not accepted by the current factory. The logical series identifier is supplied by `GROUP BY`, not as a third aggregate argument. Irregular timestamp spacing is permitted, but lag `h` means `h` positions in canonical key order, not `h` seconds.
+Keys accept `UInt32`, `UInt64`, `DateTime`, or `DateTime64`. Values accept native integer and floating-point types and are converted to `Float64`; Decimal is not accepted. Duplicate timestamps and non-finite values are errors. The primary private-preview gate is `enable_time_series_aggregate_functions`; the factory also accepts the legacy compatibility gate `enable_time_series_table`.
 
-### 6.1 Autocorrelation
+## 4. Established diagnostics
 
-For canonical values `x_0, ..., x_{n-1}`, define
-
-\[
-\mu=\frac{1}{n}\sum_{i=0}^{n-1}x_i,
-\qquad M_2=\sum_{i=0}^{n-1}(x_i-\mu)^2.
-\]
-
-At a positive position lag `h<n`, the implemented biased, overall-mean ACF is
+Let `x_0,...,x_{n-1}` be canonical values, with
 
 \[
-\rho_h=\frac{\sum_{i=h}^{n-1}(x_i-\mu)(x_{i-h}-\mu)}{M_2}.
+\bar x=\frac1n\sum_{i=0}^{n-1}x_i,
+\qquad M_2=\sum_{i=0}^{n-1}(x_i-\bar x)^2.
 \]
 
-Lag zero returns 1 for a non-constant series. An empty or constant series, a singleton where variation cannot be established, and a positive lag `h>=n` return NaN. The denominator is not shortened with the numerator; this formula choice is part of the API and is used consistently by the oracle and tests.
-
-The multiset ambiguity motivating keyed storage is visible even in three values. Sequences `(1,2,4)` and `(1,4,2)` contain the same multiset but have lag-one autocorrelations `-1/42` and `-25/42`, respectively, under this definition. No unordered summary of the values alone can choose between them.
-
-### 6.2 Ljung-Box test
-
-For `max_lag=H` with `1<=H<n`, the statistic is
+The biased, overall-mean autocorrelation at position lag `h` is
 
 \[
-Q(H)=n(n+2)\sum_{h=1}^{H}\frac{\rho_h^2}{n-h}.
+\rho_h=
+\frac{\sum_{i=h}^{n-1}(x_i-\bar x)(x_{i-h}-\bar x)}{M_2}.
 \]
 
-With `model_df=d`, where `0<=d<H`, the reported p-value is the upper-tail probability
+Lag zero is 1 for a non-constant series. Empty, constant, or insufficient inputs produce `NaN`.
+
+For `H=max_lag`, Ljung–Box is
 
 \[
-p=\Pr\{\chi^2_{H-d}\ge Q(H)\}.
+Q(H)=n(n+2)\sum_{h=1}^{H}\frac{\rho_h^2}{n-h},
+\qquad
+p=\Pr\{\chi^2_{H-d}\ge Q(H)\},
 \]
 
-Ljung and Box proposed the statistic as a finite-sample improvement to the earlier residual autocorrelation portmanteau test [@boxpierce1970; @ljungbox1978]. Its chi-square calibration is asymptotic. The API returns `(NaN, NaN)` when the requested lag set cannot be computed or the series is constant, and rejects inconsistent constant parameters before state construction. The optional `d` allows users to account for fitted model degrees of freedom; it does not fit that model inside the aggregate.
+where `d=model_df` and `0<=d<H` [@boxpierce1970; @ljungbox1978]. This is the one API in the family that returns a calibrated tail probability, subject to its asymptotic assumptions.
 
-### 6.3 Durbin-Watson statistic
-
-For the supplied canonical sequence,
+Durbin–Watson is
 
 \[
-DW=\frac{\sum_{i=1}^{n-1}(x_i-x_{i-1})^2}{\sum_{i=0}^{n-1}x_i^2}.
+DW=\frac{\sum_{i=1}^{n-1}(x_i-x_{i-1})^2}
+         {\sum_{i=0}^{n-1}x_i^2}.
 \]
 
-The statistic originates as a diagnostic for serial correlation in regression residuals [@durbinwatson1950; @durbinwatson1971]. The function deliberately does not infer or fit a regression. If raw observations are supplied, as in the synthetic experiment, the result is descriptive and must not be interpreted as a complete regression test. Fewer than two samples or a zero denominator yields NaN.
+It is classically a residual diagnostic [@durbinwatson1950; @durbinwatson1971], but the aggregate fits no regression. Fewer than two samples or a zero denominator yields `NaN`.
 
-## 7. Floating-point design
+## 5. Lagged linear regression
 
-The state retains original `Float64` values as its source of truth, but directly forming raw sums, squares, and differences can overflow or underflow. It can also erase small but representable variation near a large offset. The implementation therefore changes coordinates before products are accumulated.
-
-For ACF and Ljung-Box, let `a=min(x_i)`, `b=max(x_i)`, and compute
+For fixed order `p`, the fitted positional autoregression follows the classical autoregressive lag construction [@yule1927]:
 
 \[
-\ell=\operatorname{midpoint}(a,b),\qquad
-s=\max(|a-\ell|,|b-\ell|).
+y_t=\alpha+\sum_{j=1}^{p}\phi_j y_{t-j}+\varepsilon_t,
+\qquad t=p,\ldots,n-1.
 \]
 
-The standard-library midpoint operation avoids the overflow-prone expression `(a+b)/2`. If `s=0`, the series is constant. Otherwise the implementation forms `y_i=(x_i-l)/s`, computes the mean of `y` with a Neumaier-compensated sum, and evaluates centered products in the scaled coordinates. Because
+The returned coefficient array is ordered `(phi_1,...,phi_p)`. `p` is fixed at aggregate creation, must lie in `[1,16]`, and must be below `max_samples`. Lagged design rows are constructed only after the full keyed state has been sorted. Locally fitted coefficients are never merged; merging local models would not equal fitting the global design.
+
+The finalizer centers and scales response and predictor columns, then performs a streaming Givens QR factorization without column pivoting. It requires positive residual degrees of freedom, rejects rank-deficient or non-finite designs, and rejects a scaled reciprocal condition estimate below `1e-12`. The checked work budget is
 
 \[
-x_i-\mu_x=s(y_i-\bar y),
+r p^2\le 100{,}000{,}000,
 \]
 
-the factor `s^2` appears in both the ACF numerator and denominator and cancels. The result is the same stated statistic in exact arithmetic, while intermediate centered values remain near unit scale. The stored-vector design permits this two-pass min/max and centering procedure; it is not a recurrence over a running mean.
+where `r=n-p` is the number of design rows. Exceeding the budget or failing the numerical guards returns a fixed-shape result containing `NaN` values. The persistent state remains `O(n)`; QR finalization is `O(rp^2)` with a small bounded matrix.
 
-Durbin-Watson uses `s_0=max(abs(x_i))`. For `s_0>0`, numerator and denominator are formed from `x_i/s_0` using compensated sums. Their common factor `s_0^2` also cancels. This protects inputs such as alternating `+/-1e200` or `+/-1e-200`, and the tests extend the scale cases to `1e300` and `1e-300`. Large-offset cases use offsets `1e12` and `1e16` with representable increments. These checks demonstrate protection against common range failures, not arbitrary-precision arithmetic: variation already rounded away when a value is converted to `Float64` cannot be recovered.
+## 6. Fixed-lag ADF statistic
 
-## 8. Implementation map and current status
+For augmentation lag `p`, the implemented regression is
 
-The implementation is organized around a shared templated state and a thin factory/lifecycle layer.
+\[
+\Delta y_t=d_t+\gamma y_{t-1}
+ +\sum_{j=1}^{p}\psi_j\Delta y_{t-j}+\varepsilon_t,
+\qquad t=p+1,\ldots,n-1.
+\]
 
-| Concern | Production responsibility | Evidence artifact |
-|---|---|---|
-| Shared state | add, canonicalize, merge, serialize, deserialize, numeric finalizers | diagnostics header |
-| Factory and API | parameter/type checks, result type, documentation, three registrations | diagnostics source |
-| Global registry | declaration and registration call | aggregate registry source |
-| Build inclusion | production source in aggregate target | TimeSeries CMake list |
-| State tests | ordering, merge trees, caps, wire corruption, scale cases | native GoogleTest fixture |
-| SQL behavior | types, errors, combinators, serialized states, table-part merge | stateless SQL/reference pair |
-| Independent oracle | formula, merge, canonical JSON, adversarial properties | Python reference and tests |
+This is the fixed-lag augmented Dickey--Fuller regression [@dickeyfuller1979; @saiddickey1984].
 
-In the checkout these correspond to `src/AggregateFunctions/TimeSeries/AggregateFunctionTimeSeriesDiagnostics.h`, the matching `.cpp`, `src/AggregateFunctions/registerAggregateFunctions.cpp`, and the local TimeSeries `CMakeLists.txt`. Native state tests are under `src/AggregateFunctions/tests/gtest_time_series_diagnostics.cpp`; the SQL pair is installed as `tests/queries/0_stateless/05161_time_series_diagnostics.sql` and its `.reference`. Package-level mirrors in the neighboring directories preserve the reviewable source, tests, and documentation.
+The deterministic mode is exactly one of:
 
-The factory enables the same private-preview setting used by the neighboring time-series aggregate family. Parameters are constant and validated at creation: autocorrelation lag is non-negative, Ljung-Box maximum lag is positive, `model_df < max_lag`, and positive lags must be compatible with the sample cap. The Ljung-Box result is a named two-field tuple. No compact, KPSS, or AR(1) aggregate is registered.
+- `none`: no deterministic term;
+- `constant` (default): an intercept;
+- `trend`: an intercept and linear trend in canonical row position.
 
-Validation status is reported at the granularity actually observed. The production diagnostics translation unit and modified aggregate-registry translation unit compile in isolation with Clang 21 and `-Werror`. In the same lean Debug configuration, the aggregate library target completes 5,672/5,672 build actions and the unified ClickHouse target completes 1,167/1,167. The resulting ClickHouse 26.9.1.1 binary has SHA-256 `ed87933045a2b92e0f88875308f2a3d161da6bab3ebb4b0bc45862b809674779`; a local query executes all three functions before the server-level tests. Exact commands, environment details, and log hashes are preserved in the native-validation evidence.
+The augmentation lag is fixed at aggregate creation and lies in `[0,16]`. For a series long enough to form regression rows, the function returns the coefficient `gamma`, its regression t-ratio, and `observations=n-p-1`. It performs no automatic lag selection and returns no p-value. The statistic is not a Student-t hypothesis test; obtaining ADF critical probabilities would require an audited response-surface convention not present in this API.
 
-## 9. Layered verification and coverage
+Sample admission follows the fixed-lag guard used by the official statsmodels `adfuller` implementation [@statsmodels_adfuller_source]:
 
-Verification is layered so that a failure can be localized rather than hidden behind one end-to-end status. The dependency-free Python reference is the mathematical and state-machine oracle. Its 15 deterministic unit tests include hand-computed ACF, Ljung-Box, and Durbin-Watson values; arbitrary input order; interleaved partial states and randomized merge trees; duplicate and cap failures; canonical serialization; chi-square survival reference values; constant, short, zero, and non-finite inputs; large offsets; and extreme symmetric scales. The repository's coverage record marks these reference cases as passing.
+\[
+p\le\left\lfloor\frac n2\right\rfloor-d-1,
+\]
 
-The native GoogleTest fixture contains 15 focused state tests. It exercises the same ordering and formula invariants directly against the C++ state, including several merge-tree parenthesizations, canonical serialized-byte equality, corrupt version/count/order/non-finite/truncated payloads, bounded deserialization allocation, and the scale transformations. Linked against the production aggregate library in a focused ClickHouse test runner, all 15 tests pass in 9 ms. This layer localizes state and numeric defects without requiring SQL parsing or a server.
+where `d` is the number of deterministic terms (`0`, `1`, or `2`), followed by a positive residual-degrees-of-freedom check. The returned observation count remains informative even when the fit is undefined.
 
-The stateless SQL fixture exercises the public surface: exact and undefined outputs, named tuple fields, all four key types, native numeric dispatch, Decimal and unsupported key rejection, NULL combinator behavior, parameter limits, `-State`, `-Merge`, and `-MergeState`, duplicate keys within and across states, non-finite values, canonical serialized-state bytes, and interleaved parts in an `AggregatingMergeTree`. It also uses the existing two-shard localhost cluster: a shard-filtered query merges disjoint partial states to ACF 0.25 and Durbin-Watson 0.1, while an unfiltered read duplicates keys and must propagate `BAD_ARGUMENTS`. The targeted server run passes 1/1 in 0.48 s. Malformed opaque bytes remain a lower-level test responsibility because ordinary SQL should not manufacture arbitrary aggregate-state payloads.
+The same centered/scaled, non-pivoted Givens QR solver is used. Let `r=n-p-1` be the number of post-lag regression rows (and the returned `observations` count), and let `c` be the actual QR column count: `1+p` for `none` or `constant`, and `2+p` for `trend`; centering removes the explicit constant column but not its residual-degree-of-freedom cost. A fit is undefined if it is insufficient, singular, ill-conditioned (`rcond<1e-12`), non-finite, or if
 
-| Layer | Principal question | Status |
-|---|---|---|
-| Design proof | Is the state closed and associative on valid inputs? | documented |
-| Python oracle | Do formulas and merge properties hold independently? | passing in repository record |
-| Python experiments | Are deterministic generators and outputs reproducible? | artifacts and audit present |
-| Clang TU checks | Do production and registry units compile warning-free? | passed with Clang 21, `-Werror` |
-| Native GoogleTest | Does the C++ state satisfy low-level cases? | 15/15 passed, 9 ms |
-| Stateless SQL | Do registration, types, errors, combinators, and table merges work? | 1/1 passed, 0.48 s |
-| Distributed execution | Do two shard states merge and duplicate errors propagate? | covered by the passing SQL fixture |
-| Native benchmark | Are runtime, RSS, state size, grouping, and fan-in recorded? | 96 raw measurements plus smoke and metadata |
+\[
+r c^2>100{,}000{,}000.
+\]
 
-This layered account prevents three common overclaims. Compiling a translation unit is not a linked target build. Passing a Python oracle is not executing C++. A Debug complete-process benchmark is not a release-build throughput study. Each result is useful, but only for the question its layer actually answers.
+An additional backward-error floor treats residual variance below Float64 resolution as unresolved instead of turning QR roundoff into an enormous t-ratio. Timestamp spacing is ignored: ADF interpretation requires the caller to supply defensibly equally spaced observations.
 
-## 10. Synthetic diagnostic experiment
+## 7. KPSS statistic
 
-### 10.1 Method
+`timeSeriesKPSSTest` accepts `regression='level'` or `regression='trend'`. Let `e_t` be residuals after subtracting the sample mean in level mode or an intercept and canonical-position linear trend in trend mode. Define the cumulative residual path
 
-The experiment script generates six simple processes: independent standard normal white noise; stationary AR(1) with `phi=0.5` and `phi=0.9`; a random walk; a linear trend plus noise; and a level shift at the midpoint. The fixed configuration is `n=300`, seed `20260910`, 200 independent repetitions, and 20 Ljung-Box lags. A single-run CSV records one seeded realization of each process. A repeated-summary CSV records empirical rejection rates and selected estimation errors. The figure and tables are generated artifacts rather than hand-selected examples.
+\[
+S_t=\sum_{i=0}^{t}e_i,
+\]
 
-SciPy was unavailable in the captured environment, so the experiment's Ljung-Box p-values use the documented Wilson-Hilferty chi-square survival approximation. This differs from the native C++ path and limits how precisely the experiment can validate tail probabilities. NumPy 2.1.2 and Matplotlib 3.9.2 were present under CPython 3.12.6 on Windows 11. The environment file records this provenance.
+the sample autocovariances
 
-![Sample autocorrelation profiles for the six generated processes, using n=300, seed 20260910, and the associated 200-repetition study. AR(1) fitting and KPSS values produced by the broader script are exploratory and are not native APIs.](../evidence/experiments/acf_diagnostics.png)
+\[
+\widehat\gamma_h=\frac1n\sum_{t=h}^{n-1}e_t e_{t-h},
+\]
 
-### 10.2 Measured results
+and the Bartlett/Newey–West long-run variance
 
-The following table reports the one-draw values. The white-noise result is compatible with weak sample autocorrelation, while the persistent AR(1) and random-walk draws show large positive lag-one ACF. Trend and midpoint-shift series also trigger the portmanteau statistic because the diagnostic responds to serial structure broadly; it does not identify its cause. The random-walk p-value stored as 0.0 is floating-point underflow, not an exact mathematical zero.
+\[
+\widehat\omega_q^2=\widehat\gamma_0+
+2\sum_{h=1}^{q}\left(1-\frac{h}{q+1}\right)\widehat\gamma_h.
+\]
 
-| Process | ACF(1) | Q(20) | Ljung-Box p | DW |
-|---|---:|---:|---:|---:|
-| white noise | -0.1184 | 23.6152 | 0.2592 | 2.2325 |
-| AR(1), phi=0.5 | 0.4942 | 134.7573 | 6.8984e-18 | 1.0082 |
-| AR(1), phi=0.9 | 0.8707 | 749.5459 | 4.2036e-111 | 0.2499 |
-| random walk | 0.9796 | 4421.4050 | 0.0* | 0.0086 |
-| trend plus noise | 0.3750 | 936.0809 | 3.7427e-136 | 0.5287 |
-| midpoint mean shift | 0.4854 | 1254.4266 | 1.2478e-176 | 0.7218 |
+The returned statistic is
 
-`*` Stored after floating-point underflow; not exact zero.
+\[
+KPSS=\frac{n^{-2}\sum_{t=0}^{n-1}S_t^2}{\widehat\omega_q^2}
+\]
 
-Across 200 repetitions, the 5% Ljung-Box rejection rate is 0.065 for white noise and 1.000 for each of the other five generators. The white-noise rate is an empirical false-positive estimate. The other rates are detection frequencies for serial structure, not proof that all processes belong to one alternative model; only the two AR(1) generators are stationary AR alternatives. Monte Carlo error is material with 200 repetitions, and the synthetic length is short.
+[@kpss1992; @neweywest1987]. The function returns the statistic, the resolved requested/default bandwidth parameter, and `n`; that bandwidth field remains populated even when a guard makes the statistic undefined. It returns no p-value.
 
-The broader experiment also computes an exploratory AR(1) fit/forecast and KPSS level/trend statistics. Those outputs are helpful research controls: the mean ACF(1) estimates are 0.4889 and 0.8827 for the two AR settings, and KPSS reacts to the random walk, trend, and shift according to its different stationarity null. However, they are intentionally excluded from the main diagnostic table and from the function count. KPSS uses interpolated asymptotic critical values, and the AR(1) routine is an external Python regression. Neither is implemented, registered, or benchmarked as a native aggregate. Likewise, the midpoint shift is a generated process, not a formal change-point test or location estimate.
+For `n>=2`, if bandwidth is omitted, this implementation uses its own explicit floor rule
 
-## 11. Benchmark evidence
+\[
+q=\min\left(n-1,\left\lfloor12(n/100)^{1/4}\right\rfloor\right).
+\]
 
-### 11.1 Python state microbenchmark
+For `n<2`, the resolved bandwidth is zero and the statistic is undefined. This convention must not be described as another library's `legacy` mode. An explicit `q` is non-negative and capped at 1024; creation requires `q<max_samples`, while a defined statistic additionally requires `q<n`. Direct finalization is `O(nq)` and returns an undefined statistic when `nq>100,000,000`, the long-run variance is non-positive/non-finite, or the detrended series has no resolvable variation. The timestamp/equal-spacing caveat applies here as strongly as for ADF.
 
-The benchmark compares two Python implementations: `exact_store_sort` and `naive_full_recompute`. Both retain rows and both finalizers compute actual ACF values through the requested lag, Ljung-Box `Q`, and Durbin-Watson. The benchmark separates add, merge, and finalize phases; combining numbers from different phases would be invalid. It explores 1,000, 5,000, and 10,000 rows; 128 random keys; lags 1, 8, and 64; 1, 4, and 16 chunks; contiguous and interleaved partitions; two repetitions; and seed `20260910`.
+## 8. One-mean-shift estimator
 
-| Phase | Rows | Chunks | Exact ms | Naive ms | Exact bytes | Naive bytes |
-|---|---:|---:|---:|---:|---:|---:|
-| add | 1,000 | 1 | 0.339 | 0.137 | 135,236 | 129,285 |
-| merge | 5,000 | 16 | 0.444 | 0.193 | 617,056 | 645,249 |
-| finalize | 5,000 | 16 | 54.472 | 59.792 | 617,056 | 645,249 |
-| merge | 10,000 | 16 | 0.636 | 0.486 | 1,220,504 | 1,290,329 |
-| finalize | 10,000 | 16 | 157.828 | 179.847 | 1,220,504 | 1,290,329 |
+For every legal split `k` satisfying `min_segment<=k<=n-min_segment`, define
 
-The selected rows illustrate the intended complexity story without supporting a speedup claim. State bytes grow approximately linearly with row count. Merge is small because it is a sorted-vector operation after chunk construction, whereas finalization at lag 64 evaluates many lag products and dominates. In these selected cases the exact design finalizes faster than the naive baseline, but it adds and merges more slowly in several configurations. With only two repetitions, interpreter overhead, object layout, garbage collection, and timer noise are all important. The correct conclusion is that the measurement harness separates the relevant phases and confirms linear retained state; it does not predict native throughput.
+\[
+SSE(k)=\sum_{i<k}(x_i-\bar x_{0:k})^2+
+       \sum_{i\ge k}(x_i-\bar x_{k:n})^2.
+\]
 
-The captured Python benchmark environment is CPython 3.12.6 on Windows 11 with 20 logical CPUs, and it records ClickHouse checkout commit `4d7f75efa83c3d81dff96373ce9874e2864c4e23`.
+The chosen split minimizes this objective. If
 
-### 11.2 Native ClickHouse measurements
+\[
+SSE_0=\sum_{i=0}^{n-1}(x_i-\bar x)^2,
+\]
 
-The native harness uses the linked ClickHouse 26.9.1.1 Debug binary on WSL2, Clang 21.1.8, an Intel Core i7-12700H, 20 logical CPUs, 7.6 GiB RAM, and `max_threads=1`. Its deterministic signal is `sin(0.017t)+0.25cos(0.071t)+0.001(t mod 11)`. It evaluates all three functions for 1,000, 10,000, and 50,000 rows, with lag labels 1, 8, and 64, and three repetitions. Each timing launches a fresh `clickhouse local` process, evaluates the aggregate, and discards formatting with `FORMAT Null`. The visible warm-up row records ACF(8) 0.97338079, Ljung-Box Q(8) 7856.153678662713, and Durbin-Watson 0.00059016.
+the descriptive score is
 
-| Function, 50,000 rows | Lag 1 median | Lag 8 median | Lag 64 median |
-|---|---:|---:|---:|
-| autocorrelation | 0.05 s | 0.06 s | 0.06 s |
-| Ljung-Box | 0.05 s | 0.05 s | 0.06 s |
-| Durbin-Watson control | 0.05 s | 0.05 s | 0.06 s |
+\[
+score=\max\left(0,1-\frac{SSE(k^*)}{SSE_0}\right).
+\]
 
-Durbin-Watson has no lag parameter; its three labels repeat the same query as a matrix control. Median maximum resident set size across the largest cases is about 153 MiB, most of which is the ClickHouse process rather than the aggregate state. `/usr/bin/time` reports only hundredths of a second here, so startup dominates and the derived rows-per-second values are too coarse for a production claim.
+It is the fraction of one-mean variation removed by a two-mean fit, not a p-value and not a general multiple-change procedure. `min_segment` must be positive and cannot exceed `max_samples/2`. `split_index` is the number of samples in the left segment. No identifiable improvement returns `split_index=0` with `NaN` fields.
 
-The RowBinary state measurement gives a more exact resource result. One 50,000-sample autocorrelation state occupies 800,018 bytes; four partial states occupy 800,072 bytes; and sixteen occupy 800,288 bytes. These values equal 16 bytes per retained `(UInt64, Float64)` sample plus an 18-byte version/cap/count header for each state. Complete-process construction takes 0.05--0.06 s. Merging 1, 4, or 16 partial states and aggregating the same 50,000 rows into 1, 4, or 16 series each records 0.05 s at this resolution. The raw 96 measurements, script, metadata, and summary are retained in the native-benchmark evidence. They confirm linear serialized storage and successful execution across the requested matrix; distinguishing algorithmic CPU constants requires a larger optimized-build study.
+The native finalizer range-scales values, maintains a running prefix Welford moment [@welford1962; @chan1983], and stores directly accumulated suffix Welford moments. Reconstructing suffix SSE by subtracting the prefix and between-mean terms from the total was rejected because a strong break can make that subtraction catastrophically cancel. The native scan is `O(n)` time with `O(n)` transient suffix memory in addition to the `O(n)` persistent keyed state. The independent Python oracle intentionally uses a direct `O(n^2)` slice scan.
 
-## 12. Limitations and threats to validity
+Let `gamma_n=n*epsilon/(1-n*epsilon)`, where `epsilon` is binary64 machine epsilon. The finalizer accepts a later candidate only when `incumbent-candidate > 8*gamma_n*max(|candidate|,|incumbent|)`; this count-aware envelope prevents accumulated Welford rounding on a long no-improvement series from manufacturing a change, and otherwise retains the earliest canonical split. After rescaling, a positive SSE too large for `Float64` is returned as `+Inf` without discarding an otherwise valid split; an extremely small SSE may underflow to zero. The dimensionless score can remain valid in both cases.
 
-The largest product limitation is memory. Exact arbitrary-order semantics retain one key/value record per accepted sample, so one high-cardinality group can use substantial arena memory and serialized storage. `max_samples` makes the failure explicit but does not make the algorithm suitable for unlimited histories. Dirty states also require sorting, and Ljung-Box finalization costs `O(nH)`. Requesting every lag through `n-1` would be quadratic; the hard lag cap limits configuration, not the fundamental cost.
+## 9. Numerical policy shared by the family
 
-The timestamp is an order key, not a sampling model. Gaps, unequal spacing, time zones, and calendar effects are not repaired. A position lag is meaningful only if the query's preprocessing gives positions a defensible interpretation. Duplicate timestamps fail instead of being averaged or selected. NULL rows are skipped by the engine, which can change spacing; users requiring explicit missing observations must regularize the series first.
+ACF and Ljung–Box use a midpoint/range coordinate transform; Durbin–Watson divides by the maximum absolute value. Compensated sums reduce avoidable cancellation. Regression columns are centered and scaled before QR. KPSS and mean-shift calculations similarly operate in scaled coordinates. These transformations preserve the stated dimensionless quantities in exact arithmetic, but cannot recover information already lost when an input is converted to `Float64`.
 
-Statistical interpretation is also limited. ACF is descriptive. Ljung-Box uses an asymptotic reference and depends on the chosen lag and any fitted-model degrees of freedom. Durbin-Watson is classically a regression-residual diagnostic, but this function accepts any supplied values and does not provide critical bounds or regression context. None of the three locates a change point, proves stationarity, fits an AR model, or generates a calibrated forecast.
+Undefined outcomes are part of the contract, not silent success. Depending on the API, they appear as `NaN` scalar or tuple fields while counts/bandwidth may remain populated. The independent Python oracle checks ordinary numerical formulas; it is not a bitwise or edge-case API oracle: it may raise `ValueError`, uses a strict change-point comparison, and omits native work guards. Cross-platform validation must use absolute and relative tolerances and separately check finiteness, `NaN`, bounds, and deterministic tie behavior.
 
-Numerically, affine scaling and compensation reduce avoidable failures but do not remove `Float64` limits. Input conversion can round large integers, subnormal behavior is platform-dependent, and chi-square tail evaluation may underflow. Cross-platform checks should combine absolute and relative tolerance and separately assert finiteness, NaN contracts, and monotonic bounds such as `0<=p<=1`.
+## 10. Implementation and validation status
 
-Finally, the empirical evidence is deliberately modest. Six synthetic generators, one length, one fixed seed, 200 repetitions, and a two-repeat Python benchmark cannot establish real-workload accuracy. Native validation uses a lean Debug build and one focused SQL test rather than the complete ClickHouse suite; the native timing matrix stops at 50,000 rows and is startup-limited. No release-mode or million-row throughput claim follows from it. These bounds define the evidence actually obtained rather than hiding unperformed work.
+The checkout on branch `coursework/time-series-extensions` contains the original diagnostics state and wrapper plus `AggregateFunctionTimeSeriesStatisticalExtensions.h/.cpp`. The extension state delegates all keyed storage and canonical merging to the same exact sample state, while its envelope records the finalizer kind and constant parameters. The global registry source calls both registration functions. Three additional SQL/reference fixtures (`05162`--`05164`, four fixtures total with `05161`) and a focused extension GoogleTest source are present in the working tree.
 
-## 13. Reproduction protocol
+Source presence and registration are not equivalent to validated native execution. The following ledger records completed local native evidence separately from the still-unavailable remote CI layer:
 
-From the manuscript directory, the independent reference, experiment, audit, and benchmark artifacts can be regenerated with:
+| Native acceptance layer | Current status |
+|---|---|
+| Release build | **PASS** — retained full log `6838/6838`; later default-target incremental verification `545/545` (exit `0`). |
+| Seven-API focused GoogleTest | **PASS** — `38/38` in Release acceptance and again `38/38` in the focused Debug run; the Release acceptance package is `evidence/native-acceptance-20260916-58b61c3a/`, the Debug package is `evidence/debug-gtest-20260916-1ad279671/`. |
+| SQL stateless fixtures `05161`–`05164` | **PASS** — `4/4`, zero skipped and zero failed; results and command logs are in `evidence/native-acceptance-20260916-58b61c3a/`. |
+| Two-shard Distributed and `AggregatingMergeTree` execution | **PASS** — both paths, including duplicate-key error propagation, are included in the same native acceptance package. |
+| Required remote CI | **BLOCKED** — draft PR [`#1`](https://github.com/shumakovaes/ClickHouse/pull/1) is mergeable/clean, but the inherited workflow admits only `master` as its base; this PR correctly targets `coursework/mergeable-time-series-statistics`, and the fork has zero self-hosted runners. |
+| Native Release benchmark | **PASS** — 92 measured rows in `evidence/native-benchmark-20260916-58b61c3a/`; state/merge evidence separately contains 123 direct, 192 state-size, and 96 merge rows in `evidence/state-merge-benchmark-20260916-1ad279671/`. |
+
+The Release-build package `evidence/release-build-20260916-1ad279671/` explicitly marks the later verification as not a clean rebuild and records revision `1ad279671de9cdda088fb64046d6ae1d4e7f854f` plus binary SHA-256 `c0753569f7b2c1abc1c41e3e5ae57c5834f4094bff879df64dac236eba33eac4`. The earlier three-diagnostic revision is not used as proof for the extensions. The stated Release/Debug runs cover all seven APIs; the SQL acceptance covers dispatch and serialization-oriented paths, and the Distributed/`AggregatingMergeTree` cases cover merge execution. Each evidence package contains a SHA-256 manifest verified after the run. Remote CI remains a distinct blocked gate.
+
+## 11. Extension experiment: independent Python evidence
+
+The extension experiment uses seed `20260915`, `n=240`, 120 repetitions, fixed ADF lag 1, and `min_segment=20`. Its final provenance-complete LF-normalized run took 4.170579 seconds under Python 3.12.6 on Windows. The recorded tables contain 360 AR-fit rows, 240 ADF rows, 480 KPSS rows, 120 mean-shift rows, 12 edge outcomes, and one optional-library cross-check row. Calculations use the independent coursework batch oracle; optional statsmodels was available only as a cross-check. These results are statistical/reference evidence, not execution of the C++ aggregates.
+
+| Experiment | Verified result |
+|---|---:|
+| AR(1), phi=0.25, noise SD 0.2 | 120/120 fits; intercept bias 0.002854 and RMSE 0.034467; phi1 bias -0.007942 and RMSE 0.063852 |
+| AR(1), phi=0.70, noise SD 1.0 | 120/120 fits; intercept bias 0.009558 and RMSE 0.089170; phi1 bias -0.007259 and RMSE 0.051025 |
+| AR(2), phi=(0.50,-0.25), noise SD 0.5 | 120/120 fits; intercept bias 0.004495 and RMSE 0.049320; phi1 bias -0.005070 and RMSE 0.062453; phi2 bias -0.007596 and RMSE 0.061536 |
+| ADF direction | stationary mean -7.76810; random-walk mean -1.56964; stationary was more negative in 120/120 pairs |
+| KPSS level behavior | level-stationary mean 0.16800; random-walk mean 0.86441; level was smaller in 113/120 pairs (0.9417) |
+| KPSS trend behavior | detrended trend mean 0.07503; level-only trend mean 1.70315; detrended was smaller in 120/120 pairs |
+| Mean-shift localization | mean absolute error 0.1083 samples; exact in 109/120 (0.9083); within 12 samples in 120/120 |
+
+ADF and KPSS rows are directional comparisons only. Because the APIs deliberately return no p-values, these rows make no calibrated rejection-rate claim. The optional statsmodels cross-check differences were approximately `5.33e-15` for ADF, zero for the AR intercept, `1.67e-16` and `3.05e-16` for the two AR coefficients, and `1.39e-17` for KPSS. They support agreement of this fixture, not universal equivalence across all inputs and conventions.
+
+The recorded edge grid contains constant, short, and NULL-filtered cases. It checks that undefined results stay explicit, that usable values remain available where defined, and that a constant series maps to `split_index=0`. It complements, rather than replaces, the completed C++ and SQL runs.
+
+## 12. Python-oracle benchmark, explicitly non-native
+
+The extension benchmark times independent batch-oracle finalizers on Windows/Python 3.12.6. Input generation and one warm-up are outside each timed sample; each case has three timed repetitions. `tracemalloc` measures Python-traced allocation, not process RSS and not a ClickHouse allocator. The change-point oracle is intentionally `O(n^2)`, unlike the native `O(n)` finalizer.
+
+Selected largest-case medians are:
+
+| Python oracle finalizer | Configuration at n=4096 | Median time | Median traced peak |
+|---|---|---:|---:|
+| lagged regression | p=1 | 62.911 ms | 716,160 bytes |
+| lagged regression | p=8 | 123.553 ms | 850,304 bytes |
+| ADF | p=0, constant | 78.213 ms | 847,840 bytes |
+| ADF | p=4, constant | 130.798 ms | 981,260 bytes |
+| KPSS | trend, q=0 | 22.253 ms | 625,260 bytes |
+| KPSS | trend, q=32 | 402.003 ms | 625,260 bytes |
+| mean shift | min_segment=8 | 5,824.721 ms | 359,088 bytes |
+
+The benchmark spans `n={256,1024,4096}`, AR orders `{1,4,8}`, ADF lags `{0,2,4}`, and KPSS bandwidths `{0,8,32}`. Its only defensible interpretation is algorithmic behavior of the independent Python oracle on one host. It provides no ClickHouse throughput, query-plan, vectorization, RSS, serialization-size, or Release-build claim.
+
+## 13. Limitations and threats to validity
+
+- Every function retains all accepted samples. `max_samples` makes exhaustion explicit but does not make the state suitable for unlimited histories.
+- Dirty state sorting costs `O(n log n)`; Ljung–Box costs `O(nH)`; lagged regression and ADF cost `O(rc^2)`; KPSS costs `O(nq)`; native mean shift uses `O(n)` transient memory.
+- Lags and trends are positional. Unequal timestamps are not repaired, and skipped NULL rows alter the position sequence.
+- ADF has fixed caller-selected lag and no p-value or MacKinnon calibration. KPSS has a local bandwidth rule and no p-value. Their statistics alone do not prove stationarity or nonstationarity.
+- Lagged regression fits a conditional linear model but supplies no forecast intervals or automatic order selection.
+- Mean shift assumes at most one change in the mean, returns a descriptive score, and does not provide a false-positive calibration or distinguish mean change from other misspecification.
+- Non-pivoted QR and a fixed `rcond` threshold intentionally reject some difficult but mathematically identifiable designs. The residual-resolution policy may classify genuine noise below the Float64 floor as unresolved.
+- The Python experiment uses one sample length, one top-level seed, and 120 repetitions. Its frequencies are Monte Carlo observations, not theoretical probabilities.
+- The Python benchmark is not native. Native Release build, focused gtest, SQL/Distributed execution, and native performance have been recorded locally, but remote CI remains **BLOCKED** and cross-platform performance/allocation coverage is not exhaustive.
+- The branch is coursework work in a fork; registration metadata is not evidence that the functions have entered an official ClickHouse release.
+
+## 14. Reproduction protocol
+
+From the manuscript directory, the independent extension evidence can be reproduced with:
 
 ```powershell
 py -3 -m unittest discover -s ../reference/python -p "test_*.py"
-py -3 -m unittest discover -s ../evidence/experiments -p "test_*.py"
-py -3 ../evidence/experiments/run_experiments.py --n 300 --reps 200 --seed 20260910 --output-dir ../evidence/experiments/results
-py -3 ../evidence/experiments/audit_results.py --input-dir ../evidence/experiments/results --output ../evidence/experiments/results/analysis.md
-py -3 ../evidence/benchmarks/benchmark_lag_state.py --output-dir ../evidence/benchmarks/reproduced --rows 1000,5000,10000 --lags 1,8,64 --chunks 1,4,16 --repeats 2 --seed 20260910
+py -3 ../evidence/experiments/run_extension_experiments.py `
+  --seed 20260915 --n 240 --reps 120 --adf-lags 1 `
+  --change-min-segment 20 --output-dir <new-output-directory>
+py -3 ../evidence/benchmarks/benchmark_extensions.py `
+  --output-dir <new-benchmark-directory> --seed 20260915 `
+  --n 256,1024,4096 --ar-orders 1,4,8 --adf-orders 0,2,4 `
+  --kpss-bandwidths 0,8,32 --change-point-n 256,1024,4096 `
+  --min-segment 8 --warmup 1 --repetitions 3
 ```
 
-The generated `environment.json` files record the interpreter, packages, platform, seed, parameters, and source revision. Raw CSV files are retained alongside derived Markdown summaries. Native reproduction uses `research/REPRODUCING.md` and `build/run_native_validation.sh`; the latter creates a guarded temporary server configuration, runs a three-function local smoke, executes the focused SQL/Distributed fixture, and shuts the server down. The native benchmark is reproduced from the repository root with `REPEAT_COUNT=3 bash coursework/evidence/native-benchmark/run_native_benchmark.sh build-coursework/programs/clickhouse coursework/evidence/native-benchmark/reproduced`.
+The checked-in experiment evidence is under `evidence/experiments/extension_results_20260915_final_v4_trusted/`; the fresh oracle benchmark is `evidence/benchmarks/extensions-20260916-final/`. Native acceptance is `evidence/native-acceptance-20260916-58b61c3a/`, native performance is `evidence/native-benchmark-20260916-58b61c3a/`, state/merge performance is `evidence/state-merge-benchmark-20260916-1ad279671/`, and focused Debug evidence is `evidence/debug-gtest-20260916-1ad279671/`. The seven generated documentation pages pass their exact generator checks, and the isolated documentation runner reports `7/7` selected examples successful in `evidence/docs-examples-20260916-1ad279671/`. Python checks also passed: `25/25` trusted reference tests and `6/6` experiment tests. Every listed package carries a verified SHA-256 manifest. Remote CI is the remaining blocked gate.
 
-The completed native acceptance sequence built the aggregate and unified targets, ran the focused 15-test GoogleTest filter, started an isolated server, passed the stateless SQL pair including two logical shards, and then recorded the native benchmark. The compact outputs, environment, source hashes, binary hash, and build-log hashes are preserved under `evidence/native-validation/`; raw benchmark TSV files are preserved under `evidence/native-benchmark/`.
+## 15. Conclusion
 
-## 14. Conclusion
+The central result is architectural. Exact order-dependent statistics can behave as ordinary distributed aggregates when the state retains the complete keyed sample and merge is canonical sorted union. The `1,3,2` counterexample shows why a compact prefix/suffix envelope is not closed under arbitrary ClickHouse merge trees.
 
-Ordered statistics expose a sharp boundary between a mathematical formula and a database aggregate. Autocorrelation, Ljung-Box, and Durbin-Watson are simple once one canonical series is available, but arbitrary parallel aggregation does not preserve that series unless the state does. A compact boundary envelope is not closed under interleaved merge trees; the `1,3,2` counterexample makes the failure concrete. Retaining all keyed samples and merging their canonical union provides a direct associativity proof and a clear `O(n)` resource contract.
-
-The resulting coursework contribution is intentionally small and inspectable: exactly three APIs, one shared versioned state, explicit duplicate/non-finite/cap errors, scale-aware finalization, and layered evidence. Native evidence now includes warning-clean translation units, linked aggregate and unified targets, a three-function runtime smoke, 15/15 state tests, a passing SQL/Distributed fixture, and raw Debug benchmark measurements. The complete ClickHouse test corpus and release-performance study remain outside the claim. This restraint is also the central methodological result: aggregate functionality should be judged by its algebra, wire contract, test layers, and measured execution - not by the final statistical formula alone.
+Seven private-preview APIs now exist in source with explicit formulas and resource guards. The extensions narrow their claims deliberately: fixed-order AR coefficients, a fixed-lag ADF t-statistic without a p-value, KPSS under a stated Bartlett bandwidth convention without a p-value, and a descriptive one-break mean-shift objective. Independent Python experiments and benchmarks make the mathematics inspectable; completed local native Release/Debug/gtest/SQL/Distributed/benchmark evidence makes the implementation auditable. Remote CI is deliberately kept separate as **BLOCKED**, rather than being inferred from local success.
 
 ## References
 
-Complete bibliographic records are in [`../research/bibliography.bib`](../research/bibliography.bib). Citations used in this report cover ClickHouse architecture and MergeTree behavior, the native `arrayAutocorrelation` and `timeSeriesGroupArray` precedents, aggregate-state algebra, parallel moment literature, the Box-Pierce and Ljung-Box tests, and the original Durbin-Watson papers.
+Complete bibliographic records are in [`../research/bibliography.bib`](../research/bibliography.bib). They cover ClickHouse execution and time-series precedents, mergeable aggregate algebra, stable moments, autoregression, Dickey--Fuller/ADF, the Ljung–Box family, Durbin–Watson, KPSS, and Bartlett/Newey–West long-run variance estimation.

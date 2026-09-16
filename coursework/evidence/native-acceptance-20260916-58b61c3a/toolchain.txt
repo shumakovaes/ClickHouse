@@ -1,0 +1,17 @@
+captured_utc=2026-09-16T14:53:06Z
+host=Katebook
+uname=Linux 6.6.87.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun  5 18:30:46 UTC 2025 x86_64
+wslpath=/usr/bin/wslpath
+cmake_path=/usr/bin/cmake
+cmake version 3.28.3
+cmake_generator=Ninja
+configured_c_compiler=/usr/bin/clang-21
+Ubuntu clang version 21.1.8 (++20251221032922+2078da43e25a-1~exp1~20251221153059.70)
+configured_cxx_compiler=/usr/bin/clang++-21
+Ubuntu clang version 21.1.8 (++20251221032922+2078da43e25a-1~exp1~20251221153059.70)
+ninja_path=/usr/bin/ninja
+1.11.1
+ld_path=/usr/bin/ld.lld
+Ubuntu LLD 18.1.3 (compatible with GNU linkers)
+git_path=/usr/bin/git
+git version 2.43.0

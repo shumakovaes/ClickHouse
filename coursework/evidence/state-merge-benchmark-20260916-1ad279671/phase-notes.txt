@@ -1,0 +1,8 @@
+Direct rows: synthetic numbers(n) input, one aggregate group, max_threads=1.
+Input-order cases: ascending and descending timestamp streams; these measure local canonicalization cost only.
+State sizes: AggregateFunction State output is measured as raw RowBinary bytes in the temporary runtime tree; state_rows are verified by a count query, and payload size/hash are retained while the bulky raw bytes are not.
+Merge cases: states are materialized before timing in ENGINE=Memory. MergeState measures in-memory state merging and aggregate-state result computation; FORMAT Null suppresses output formatting and transport. Merge includes the same merge work plus statistical finalization and one visible result row.
+State payloads retain every timestamp/value sample, so serialized size and retained memory are O(n), not O(parameter).
+KPSS work-cap boundary: at n=100000,q=1024 the final statistic is expected to be NaN because n*q exceeds 100000000; state construction and MergeState remain valid.
+RSS is client process maximum RSS, not per-query server allocator memory. Wall time includes client/server protocol and deterministic expression evaluation.
+No p-values or statistical significance claims are made for ADF or KPSS; all results are implementation/performance measurements only.

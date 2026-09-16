@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Archived baseline harness: measures the original three coursework APIs only.
+# Its historical evidence is not extension validation.
 # Run from the WSL ClickHouse checkout.  The output directory may be on the
 # Windows workspace so that the evidence is easy to inspect and package.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

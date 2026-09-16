@@ -1,5 +1,9 @@
 # Native ClickHouse aggregate benchmark
 
+> Archived baseline record: this harness and its packaged results cover only
+> the historical three-API coursework baseline. They are not extension
+> validation and make no claim about later APIs or implementations.
+
 This harness measures the three coursework aggregates in the locally built
 ClickHouse binary:
 

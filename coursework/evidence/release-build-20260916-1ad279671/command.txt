@@ -1,0 +1,1 @@
+ninja -C /home/user/clickhouse-coursework/tmp/coursework/build-release -j1

@@ -1,0 +1,1 @@
+SELECT timeSeriesMeanShiftChangePointState(60, 1000000)(toUInt64(number), if(number < 5000, 0.0, 1.0)) FROM numbers(10000) GROUP BY number % 4 ORDER BY number % 4 SETTINGS enable_time_series_aggregate_functions = 1, max_threads = 1 FORMAT RowBinary
