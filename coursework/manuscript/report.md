@@ -250,14 +250,14 @@ Source presence and registration are not equivalent to validated native executio
 
 | Native acceptance layer | Current status |
 |---|---|
-| Release build | **PASS** — the retained full-build log completes `6838/6838`. After the focused-test target was added, the default target passed an incremental `545/545` verification (exit `0`); this is not claimed as a clean rebuild. Evidence: `evidence/release-build-20260916-1ad279671/`. |
+| Release build | **PASS** — retained full log `6838/6838`; later default-target incremental verification `545/545` (exit `0`). |
 | Seven-API focused GoogleTest | **PASS** — `38/38` in Release acceptance and again `38/38` in the focused Debug run; the Release acceptance package is `evidence/native-acceptance-20260916-58b61c3a/`, the Debug package is `evidence/debug-gtest-20260916-1ad279671/`. |
 | SQL stateless fixtures `05161`–`05164` | **PASS** — `4/4`, zero skipped and zero failed; results and command logs are in `evidence/native-acceptance-20260916-58b61c3a/`. |
 | Two-shard Distributed and `AggregatingMergeTree` execution | **PASS** — both paths, including duplicate-key error propagation, are included in the same native acceptance package. |
 | Required remote CI | **BLOCKED** — draft PR [`#1`](https://github.com/shumakovaes/ClickHouse/pull/1) is mergeable/clean, but the inherited workflow admits only `master` as its base; this PR correctly targets `coursework/mergeable-time-series-statistics`, and the fork has zero self-hosted runners. |
 | Native Release benchmark | **PASS** — 92 measured rows in `evidence/native-benchmark-20260916-58b61c3a/`; state/merge evidence separately contains 123 direct, 192 state-size, and 96 merge rows in `evidence/state-merge-benchmark-20260916-1ad279671/`. |
 
-The Release-build package records revision `1ad279671de9cdda088fb64046d6ae1d4e7f854f` and binary SHA-256 `c0753569f7b2c1abc1c41e3e5ae57c5834f4094bff879df64dac236eba33eac4`. The earlier three-diagnostic revision is not used as proof for the extensions. The stated Release/Debug runs cover all seven APIs; the SQL acceptance covers dispatch and serialization-oriented paths, and the Distributed/`AggregatingMergeTree` cases cover merge execution. Each evidence package contains a SHA-256 manifest verified after the run. Remote CI remains a distinct blocked gate.
+The Release-build package `evidence/release-build-20260916-1ad279671/` explicitly marks the later verification as not a clean rebuild and records revision `1ad279671de9cdda088fb64046d6ae1d4e7f854f` plus binary SHA-256 `c0753569f7b2c1abc1c41e3e5ae57c5834f4094bff879df64dac236eba33eac4`. The earlier three-diagnostic revision is not used as proof for the extensions. The stated Release/Debug runs cover all seven APIs; the SQL acceptance covers dispatch and serialization-oriented paths, and the Distributed/`AggregatingMergeTree` cases cover merge execution. Each evidence package contains a SHA-256 manifest verified after the run. Remote CI remains a distinct blocked gate.
 
 ## 11. Extension experiment: independent Python evidence
 

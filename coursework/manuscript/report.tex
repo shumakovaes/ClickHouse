@@ -225,7 +225,7 @@ Source presence and registration are not equivalent to validated native executio
 \toprule
 Native acceptance layer & Current status \\
 \midrule
-Release build & \textbf{PASS}: the retained full-build log completes 6838/6838. After the focused-test target was added, the default target passed an incremental 545/545 verification (exit 0); this is not claimed as a clean rebuild. Evidence: \path{evidence/release-build-20260916-1ad279671/}. \\
+Release build & \textbf{PASS}: retained full log 6838/6838; later default-target incremental verification 545/545 (exit 0). \\
 Seven-API focused GoogleTest & \textbf{PASS}: 38/38 in Release acceptance and again 38/38 in the focused Debug run; packages \path{evidence/native-acceptance-20260916-58b61c3a/} and \path{evidence/debug-gtest-20260916-1ad279671/}. \\
 SQL fixtures 05161--05164 & \textbf{PASS}: 4/4, zero skipped and zero failed; logs are in \path{evidence/native-acceptance-20260916-58b61c3a/}. \\
 Distributed and AggregatingMergeTree & \textbf{PASS}: both paths, including duplicate-key error propagation, are included in the native acceptance package. \\
@@ -234,7 +234,7 @@ Native Release benchmark & \textbf{PASS}: 92 measured rows in \path{evidence/nat
 \bottomrule
 \end{tabularx}
 
-The Release-build package records revision \texttt{1ad279671de9cdda\allowbreak 088fb64046d6ae1d\allowbreak 4e7f854f} and binary SHA-256 \texttt{c0753569f7b2c1ab\allowbreak c1c41e3e5ae57c58\allowbreak 34f4094bff879df6\allowbreak 4dac236eba33eac4}. The earlier three-diagnostic revision is not used as proof for the extensions. The stated Release/Debug runs cover all seven APIs; SQL acceptance covers dispatch and serialization-oriented paths, and the Distributed/\texttt{AggregatingMergeTree} cases cover merge execution. Each evidence package contains a SHA-256 manifest verified after the run. Remote CI remains a distinct blocked gate.
+The Release-build package \path{evidence/release-build-20260916-1ad279671/} explicitly marks the later verification as not a clean rebuild and records revision \texttt{1ad279671de9cdda\allowbreak 088fb64046d6ae1d\allowbreak 4e7f854f} plus binary SHA-256 \texttt{c0753569f7b2c1ab\allowbreak c1c41e3e5ae57c58\allowbreak 34f4094bff879df6\allowbreak 4dac236eba33eac4}. The earlier three-diagnostic revision is not used as proof for the extensions. The stated Release/Debug runs cover all seven APIs; SQL acceptance covers dispatch and serialization-oriented paths, and the Distributed/\texttt{AggregatingMergeTree} cases cover merge execution. Each evidence package contains a SHA-256 manifest verified after the run. Remote CI remains a distinct blocked gate.
 
 \section{Extension experiment: independent Python evidence}
 
