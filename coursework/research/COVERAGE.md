@@ -12,7 +12,7 @@ SQL, distributed, and remote-CI acceptance run remains pending.
 | Evidence | Scope and current status |
 |---|---|
 | `src/AggregateFunctions/tests/gtest_time_series_diagnostics.cpp` | Fifteen focused native tests for the original keyed state and three diagnostics; the prior Debug evidence recorded 15/15. |
-| `src/AggregateFunctions/tests/gtest_time_series_statistical_extensions.cpp` | Twenty-two focused test cases (seven state/envelope cases and fifteen aggregate/finalizer cases) for the four extension kinds; source is present, execution count is pending the dedicated acceptance run. |
+| `src/AggregateFunctions/tests/gtest_time_series_statistical_extensions.cpp` | Twenty-three focused test cases (eight state/envelope cases and fifteen aggregate/finalizer cases) for the four extension kinds; source is present, execution count is pending the dedicated acceptance run. |
 | `tests/queries/0_stateless/05161_time_series_diagnostics.sql` plus `.reference` | Existing public-path coverage for the original three functions; prior Debug evidence recorded 1/1. |
 | `tests/queries/0_stateless/05162_time_series_statistical_extensions.sql` plus `.reference` | Direct stateless coverage for all four extensions: preview gate, result shapes, undefined cases, parameter validation, representative `UInt64`/`Float64` dispatch, NULL handling, Decimal rejection, state combinators, duplicates, and non-finite values; fixture is present, execution is pending. |
 | `tests/queries/0_stateless/05163_time_series_statistical_extensions_distributed.sql` plus `.reference` | Two-shard `Distributed` merge, serialized partial-state merge, and cross-shard duplicate propagation for all four extensions; fixture is present, execution is pending. |

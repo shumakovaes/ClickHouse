@@ -51,7 +51,7 @@ therefore exact `O(n)` retained samples with canonical sorted union.
 | M3 | Ordering and merge-equivalence matrix, including arbitrary interleaving and duplicate cases | Complete in the state contract and the extension test/fixture definitions |
 | M4 | Independent Python/reference coverage for regression, ADF, KPSS, and mean shift, including numerical and edge cases | Present as independent oracle and experiment artifacts; not native execution evidence |
 | M5 | Four extension implementations, source `FunctionDocumentation`, and global registration | Implemented in `AggregateFunctionTimeSeriesStatisticalExtensions.{h,cpp}` and `registerAggregateFunctions.cpp`; current Release-linked acceptance remains pending |
-| M6 | Focused native extension GoogleTest source | Present: `gtest_time_series_statistical_extensions.cpp` defines 22 cases; Release-linked pass/fail count and runtime remain pending |
+| M6 | Focused native extension GoogleTest source | Present: `gtest_time_series_statistical_extensions.cpp` defines 23 cases; Release-linked pass/fail count and runtime remain pending |
 | M7 | Direct functional fixture and reference for all four extension names | Present: `05162_time_series_statistical_extensions.sql` plus `.reference`; execution result remains pending |
 | M8 | Two-shard `Distributed` merge and duplicate propagation | Present: `05163_time_series_statistical_extensions_distributed.sql` plus `.reference`; actual distributed run remains pending |
 | M9 | `AggregatingMergeTree` part merge, finalization, persistence, and duplicate failure | Present: `05164_time_series_statistical_extensions_aggregating_merge_tree.sql` plus `.reference`; actual run remains pending |

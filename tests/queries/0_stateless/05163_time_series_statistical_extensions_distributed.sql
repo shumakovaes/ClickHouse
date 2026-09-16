@@ -5,6 +5,7 @@ SET enable_time_series_aggregate_functions = 1;
 SET max_threads = 1;
 SET max_block_size = 2;
 SET prefer_localhost_replica = 0;
+SET distributed_group_by_no_merge = 0;
 
 SELECT '--- canonical reference ---';
 SELECT round(tupleElement(timeSeriesLaggedLinearRegression(1)(key, value), 'intercept'), 6),
@@ -129,7 +130,16 @@ AS time_series_stat_ext_duplicates_local
 ENGINE = Distributed('test_cluster_two_shards_localhost', currentDatabase(), time_series_stat_ext_duplicates_local, route);
 INSERT INTO time_series_stat_ext_duplicates_local VALUES
     (0, 1., 0), (0, 2., 1), (1, 3., 0), (2, 4., 1);
+SELECT timeSeriesLaggedLinearRegression(1)(key, value)
+FROM time_series_stat_ext_duplicates
+WHERE route = _shard_num - 1; -- { serverError BAD_ARGUMENTS }
+SELECT timeSeriesADFStatistic(0, 'constant')(key, value)
+FROM time_series_stat_ext_duplicates
+WHERE route = _shard_num - 1; -- { serverError BAD_ARGUMENTS }
 SELECT timeSeriesKPSSTest('level', 0)(key, value)
+FROM time_series_stat_ext_duplicates
+WHERE route = _shard_num - 1; -- { serverError BAD_ARGUMENTS }
+SELECT timeSeriesMeanShiftChangePoint(2)(key, value)
 FROM time_series_stat_ext_duplicates
 WHERE route = _shard_num - 1; -- { serverError BAD_ARGUMENTS }
 

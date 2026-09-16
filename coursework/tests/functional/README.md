@@ -48,7 +48,7 @@ Ljung--Box `max_lag` is positive.
 
 The focused native source at
 `src/AggregateFunctions/tests/gtest_time_series_statistical_extensions.cpp`
-currently defines 22 extension cases; executing that suite is part of native
+currently defines 23 extension cases; executing that suite is part of native
 acceptance. ADF checks cover fixed-lag statistic/coefficient output (no p-value),
 positional semantics and the caller's equal-spacing responsibility, and the
 QR/rcond/resolution/work rejection policy. KPSS checks the

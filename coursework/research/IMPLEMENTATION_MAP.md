@@ -57,7 +57,7 @@ earliest split.
 2. Add serialization/version and duplicate/cap rejection tests. **Complete for
    the baseline diagnostics: the isolated reference and focused native
    GoogleTest suites recorded 15/15, including malformed and bounded-reserve
-   payload cases. The extension GoogleTest source currently defines 22 cases;
+   payload cases. The extension GoogleTest source currently defines 23 cases;
    its execution remains part of native acceptance.**
 3. Register the four extension functions and result tuples. **Source
    registration is present; extension validation/acceptance remains pending.**

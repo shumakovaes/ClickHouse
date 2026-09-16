@@ -61,16 +61,36 @@ DROP TABLE IF EXISTS time_series_statistical_extensions_duplicate_mt;
 CREATE TABLE time_series_statistical_extensions_duplicate_mt
 (
     series UInt8,
-    state AggregateFunction(timeSeriesLaggedLinearRegression(1), UInt64, Float64)
+    regression AggregateFunction(timeSeriesLaggedLinearRegression(1), UInt64, Float64),
+    adf AggregateFunction(timeSeriesADFStatistic(0, 'constant'), UInt64, Float64),
+    kpss AggregateFunction(timeSeriesKPSSTest('level', 0), UInt64, Float64),
+    change_point AggregateFunction(timeSeriesMeanShiftChangePoint(2), UInt64, Float64)
 )
 ENGINE = AggregatingMergeTree
 ORDER BY series;
+SYSTEM STOP MERGES time_series_statistical_extensions_duplicate_mt;
 INSERT INTO time_series_statistical_extensions_duplicate_mt
-SELECT 0, timeSeriesLaggedLinearRegressionState(1)(key, value)
+SELECT 0,
+       timeSeriesLaggedLinearRegressionState(1)(key, value),
+       timeSeriesADFStatisticState(0, 'constant')(key, value),
+       timeSeriesKPSSTestState('level', 0)(key, value),
+       timeSeriesMeanShiftChangePointState(2)(key, value)
 FROM values('key UInt64, value Float64', (0, 1.), (2, 4.));
 INSERT INTO time_series_statistical_extensions_duplicate_mt
-SELECT 0, timeSeriesLaggedLinearRegressionState(1)(key, value)
+SELECT 0,
+       timeSeriesLaggedLinearRegressionState(1)(key, value),
+       timeSeriesADFStatisticState(0, 'constant')(key, value),
+       timeSeriesKPSSTestState('level', 0)(key, value),
+       timeSeriesMeanShiftChangePointState(2)(key, value)
 FROM values('key UInt64, value Float64', (2, 4.), (4, 16.));
-SELECT timeSeriesLaggedLinearRegressionMerge(1)(state)
+SELECT '--- duplicate persisted states remain separate ---';
+SELECT count() FROM time_series_statistical_extensions_duplicate_mt;
+SELECT timeSeriesLaggedLinearRegressionMerge(1)(regression)
+FROM time_series_statistical_extensions_duplicate_mt; -- { serverError BAD_ARGUMENTS }
+SELECT timeSeriesADFStatisticMerge(0, 'constant')(adf)
+FROM time_series_statistical_extensions_duplicate_mt; -- { serverError BAD_ARGUMENTS }
+SELECT timeSeriesKPSSTestMerge('level', 0)(kpss)
+FROM time_series_statistical_extensions_duplicate_mt; -- { serverError BAD_ARGUMENTS }
+SELECT timeSeriesMeanShiftChangePointMerge(2)(change_point)
 FROM time_series_statistical_extensions_duplicate_mt; -- { serverError BAD_ARGUMENTS }
 DROP TABLE time_series_statistical_extensions_duplicate_mt;

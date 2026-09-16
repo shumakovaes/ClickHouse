@@ -11,6 +11,10 @@ CH_JOBS="${CH_JOBS:-1}"
 CH_BUILD_LOG="${CH_BUILD_LOG:-${CH_BUILD_DIR}/build.log}"
 CH_BUILD_TARGET="${CH_BUILD_TARGET:-clickhouse_aggregate_functions}"
 CH_ENABLE_LIBRARIES="${CH_ENABLE_LIBRARIES:-OFF}"
+# Metadata capture overwrites this with the CMake cache value. Keep it
+# initialized so set -u cannot turn a completed build into a finalization
+# failure if the cache-reading path did not populate it.
+CH_ACTUAL_ENABLE_LIBRARIES="$CH_ENABLE_LIBRARIES"
 CH_ENABLE_TESTS="${CH_ENABLE_TESTS:-OFF}"
 CH_BUILD_TYPE="${CH_BUILD_TYPE:-Debug}"
 CH_MIN_CLANG="${CH_MIN_CLANG:-21}"

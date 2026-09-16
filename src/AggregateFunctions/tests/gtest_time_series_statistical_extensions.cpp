@@ -14,10 +14,13 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <initializer_list>
 #include <limits>
+#include <memory>
+#include <random>
 #include <string>
 #include <utility>
 #include <vector>
@@ -113,6 +116,105 @@ DB::MutableColumnPtr runAggregate(const String & name, const DB::Array & params,
     return result;
 }
 
+struct AggregateStateSet
+{
+    struct Slot
+    {
+        std::unique_ptr<DB::AlignedBuffer> state;
+        bool initialized = false;
+    };
+
+    DB::AggregateFunctionPtr function;
+    std::vector<Slot> states;
+
+    ~AggregateStateSet()
+    {
+        for (auto & slot : states)
+        {
+            if (slot.initialized)
+            {
+                slot.initialized = false;
+                function->destroy(slot.state->data());
+            }
+        }
+    }
+
+    void addState()
+    {
+        auto state = std::make_unique<DB::AlignedBuffer>(function->sizeOfData(), function->alignOfData());
+        function->create(state->data());
+        Slot slot{.state = std::move(state), .initialized = true};
+        try
+        {
+            states.push_back(std::move(slot));
+        }
+        catch (...)
+        {
+            if (slot.state)
+            {
+                slot.initialized = false;
+                function->destroy(slot.state->data());
+            }
+            throw;
+        }
+    }
+
+    void destroyAndErase(size_t index)
+    {
+        states[index].initialized = false;
+        function->destroy(states[index].state->data());
+        states.erase(states.begin() + index);
+    }
+};
+
+DB::MutableColumnPtr runAggregateWithChunks(
+    const String & name,
+    const DB::Array & params,
+    const std::vector<std::vector<std::pair<UInt64, Float64>>> & chunks,
+    std::mt19937_64 & rng)
+{
+    tryRegisterAggregateFunctions();
+    DB::DataTypes arguments{std::make_shared<DB::DataTypeUInt64>(), std::make_shared<DB::DataTypeFloat64>()};
+    DB::AggregateFunctionProperties properties;
+    AggregateStateSet state_set;
+    state_set.function = DB::AggregateFunctionFactory::instance().get(name, DB::NullsAction::EMPTY, arguments, params, properties);
+    state_set.states.reserve(std::max<size_t>(chunks.size(), 1));
+
+    for (const auto & chunk : chunks)
+    {
+        state_set.addState();
+        auto timestamps = DB::ColumnUInt64::create();
+        auto values = DB::ColumnFloat64::create();
+        for (const auto & [timestamp, value] : chunk)
+        {
+            timestamps->getData().push_back(timestamp);
+            values->getData().push_back(value);
+        }
+        const DB::IColumn * columns[]{timestamps.get(), values.get()};
+        for (size_t row = 0; row < chunk.size(); ++row)
+            state_set.function->add(state_set.states.back().state->data(), columns, row, nullptr);
+    }
+
+    if (state_set.states.empty())
+        state_set.addState();
+
+    while (state_set.states.size() > 1)
+    {
+        size_t left = static_cast<size_t>(rng() % state_set.states.size());
+        size_t right = static_cast<size_t>(rng() % (state_set.states.size() - 1));
+        if (right >= left)
+            ++right;
+        if (right < left)
+            std::swap(left, right);
+        state_set.function->merge(state_set.states[left].state->data(), state_set.states[right].state->data(), nullptr);
+        state_set.destroyAndErase(right);
+    }
+
+    auto result = state_set.function->getResultType()->createColumn();
+    state_set.function->insertResultInto(state_set.states.front().state->data(), *result, nullptr);
+    return result;
+}
+
 template <typename ColumnPointer>
 const DB::ColumnTuple & resultTuple(const ColumnPointer & result)
 {
@@ -154,6 +256,67 @@ DB::Array kpssParameters(const String & regression, UInt64 bandwidth)
 DB::Array kpssParameters(const String & regression)
 {
     return DB::Array{DB::Field(regression)};
+}
+
+void expectFloatResultsEqual(Float64 lhs, Float64 rhs)
+{
+    if (std::isnan(lhs) || std::isnan(rhs))
+        EXPECT_TRUE(std::isnan(lhs) && std::isnan(rhs));
+    else
+        EXPECT_DOUBLE_EQ(lhs, rhs);
+}
+
+void expectFinalizersEqual(Extension::Kind kind, const DB::MutableColumnPtr & lhs_result, const DB::MutableColumnPtr & rhs_result)
+{
+    const auto & lhs = resultTuple(lhs_result);
+    const auto & rhs = resultTuple(rhs_result);
+    if (kind == Extension::Kind::LaggedLinearRegression)
+    {
+        expectFloatResultsEqual(
+            assert_cast<const DB::ColumnFloat64 &>(lhs.getColumn(0)).getElement(0),
+            assert_cast<const DB::ColumnFloat64 &>(rhs.getColumn(0)).getElement(0));
+        const auto & lhs_coefficients = assert_cast<const DB::ColumnArray &>(lhs.getColumn(1));
+        const auto & rhs_coefficients = assert_cast<const DB::ColumnArray &>(rhs.getColumn(1));
+        ASSERT_EQ(lhs_coefficients.getOffsets(), rhs_coefficients.getOffsets());
+        ASSERT_EQ(lhs_coefficients.getData().size(), rhs_coefficients.getData().size());
+        for (size_t i = 0; i < lhs_coefficients.getData().size(); ++i)
+            expectFloatResultsEqual(
+                assert_cast<const DB::ColumnFloat64 &>(lhs_coefficients.getData()).getElement(i),
+                assert_cast<const DB::ColumnFloat64 &>(rhs_coefficients.getData()).getElement(i));
+        return;
+    }
+
+    if (kind == Extension::Kind::ADFStatistic)
+    {
+        for (size_t i = 0; i < 2; ++i)
+            expectFloatResultsEqual(
+                assert_cast<const DB::ColumnFloat64 &>(lhs.getColumn(i)).getElement(0),
+                assert_cast<const DB::ColumnFloat64 &>(rhs.getColumn(i)).getElement(0));
+        EXPECT_EQ(
+            assert_cast<const DB::ColumnUInt64 &>(lhs.getColumn(2)).getElement(0),
+            assert_cast<const DB::ColumnUInt64 &>(rhs.getColumn(2)).getElement(0));
+        return;
+    }
+
+    if (kind == Extension::Kind::KPSSTest)
+    {
+        expectFloatResultsEqual(
+            assert_cast<const DB::ColumnFloat64 &>(lhs.getColumn(0)).getElement(0),
+            assert_cast<const DB::ColumnFloat64 &>(rhs.getColumn(0)).getElement(0));
+        for (size_t i = 1; i < 3; ++i)
+            EXPECT_EQ(
+                assert_cast<const DB::ColumnUInt64 &>(lhs.getColumn(i)).getElement(0),
+                assert_cast<const DB::ColumnUInt64 &>(rhs.getColumn(i)).getElement(0));
+        return;
+    }
+
+    EXPECT_EQ(
+        assert_cast<const DB::ColumnUInt64 &>(lhs.getColumn(0)).getElement(0),
+        assert_cast<const DB::ColumnUInt64 &>(rhs.getColumn(0)).getElement(0));
+    for (size_t i = 1; i < 5; ++i)
+        expectFloatResultsEqual(
+            assert_cast<const DB::ColumnFloat64 &>(lhs.getColumn(i)).getElement(0),
+            assert_cast<const DB::ColumnFloat64 &>(rhs.getColumn(i)).getElement(0));
 }
 
 } // namespace
@@ -308,6 +471,102 @@ TEST(TimeSeriesStatisticalExtensionsState, DegenerateFixturesRemainCanonical)
     const auto spec = parameters(Extension::Kind::ADFStatistic, 0, 1);
     EXPECT_NO_THROW(deserialize(serialize(singleton, spec), spec));
     EXPECT_NO_THROW(deserialize(serialize(empty, spec), spec));
+}
+
+TEST(TimeSeriesStatisticalExtensionsState, FixedSeedRandomizedChunkingAndMergeTreesPreserveStateAndFinalizers)
+{
+    constexpr UInt64 randomized_max_samples = 64;
+    constexpr size_t rounds = 12;
+    constexpr size_t chunkings_per_round = 6;
+    std::mt19937_64 rng(0x5EED5EED12345678ULL);
+
+    struct RandomizedSpec
+    {
+        Extension::Kind kind;
+        String function_name;
+        DB::Array aggregate_parameters;
+        Parameters state_parameters;
+    };
+
+    const std::vector<RandomizedSpec> specs = {
+        {Extension::Kind::LaggedLinearRegression,
+         "timeSeriesLaggedLinearRegression",
+         numericParameters({2, randomized_max_samples}),
+         parameters(Extension::Kind::LaggedLinearRegression, 2, 0, 0, randomized_max_samples)},
+        {Extension::Kind::ADFStatistic,
+         "timeSeriesADFStatistic",
+         DB::Array{DB::Field(UInt64{1}), DB::Field(String{"constant"}), DB::Field(randomized_max_samples)},
+         parameters(Extension::Kind::ADFStatistic, 1, 1, 0, randomized_max_samples)},
+        {Extension::Kind::KPSSTest,
+         "timeSeriesKPSSTest",
+         DB::Array{DB::Field(String{"level"}), DB::Field(UInt64{2}), DB::Field(randomized_max_samples)},
+         parameters(Extension::Kind::KPSSTest, 0, 2, 0, randomized_max_samples)},
+        {Extension::Kind::MeanShiftChangePoint,
+         "timeSeriesMeanShiftChangePoint",
+         numericParameters({3, randomized_max_samples}),
+         parameters(Extension::Kind::MeanShiftChangePoint, 3, 0, 0, randomized_max_samples)},
+    };
+
+    for (size_t round = 0; round < rounds; ++round)
+    {
+        const size_t point_count = round < 3 ? round : 8 + static_cast<size_t>(rng() % 17);
+        const UInt64 timestamp_base = 1'000'000 + static_cast<UInt64>(round) * 1'000;
+        std::vector<std::pair<UInt64, Float64>> points;
+        points.reserve(point_count);
+        for (size_t i = 0; i < point_count; ++i)
+        {
+            const Float64 phase = static_cast<Float64>((round + 1) * (i + 3));
+            const Float64 value = 0.25 * static_cast<Float64>(i) + std::sin(phase) + 0.5 * std::cos(phase * 0.37);
+            points.emplace_back(timestamp_base + static_cast<UInt64>(i), value);
+        }
+
+        State canonical;
+        for (const auto & [timestamp, value] : points)
+            canonical.add(timestamp, value, randomized_max_samples);
+        canonical.sortAndValidate();
+
+        for (const auto & spec : specs)
+        {
+            const std::string expected_bytes = serialize(canonical, spec.state_parameters);
+            const auto direct_result = runAggregate(spec.function_name, spec.aggregate_parameters, points);
+            for (size_t chunking = 0; chunking < chunkings_per_round; ++chunking)
+            {
+                SCOPED_TRACE(
+                    testing::Message() << "round=" << round << ", chunking=" << chunking << ", kind=" << static_cast<UInt64>(spec.kind));
+                std::vector<std::pair<UInt64, Float64>> shuffled = points;
+                std::shuffle(shuffled.begin(), shuffled.end(), rng);
+                const size_t chunk_count = 2 + static_cast<size_t>(rng() % 7);
+                std::vector<std::vector<std::pair<UInt64, Float64>>> chunks(chunk_count);
+                for (const auto & point : shuffled)
+                    chunks[static_cast<size_t>(rng() % chunk_count)].push_back(point);
+
+                std::vector<State> states;
+                states.reserve(chunks.size());
+                for (const auto & chunk : chunks)
+                {
+                    State state;
+                    for (const auto & [timestamp, value] : chunk)
+                        state.add(timestamp, value, randomized_max_samples);
+                    states.push_back(std::move(state));
+                }
+                while (states.size() > 1)
+                {
+                    size_t left = static_cast<size_t>(rng() % states.size());
+                    size_t right = static_cast<size_t>(rng() % (states.size() - 1));
+                    if (right >= left)
+                        ++right;
+                    if (right < left)
+                        std::swap(left, right);
+                    states[left].merge(states[right], randomized_max_samples);
+                    states.erase(states.begin() + right);
+                }
+
+                ASSERT_EQ(serialize(states.front(), spec.state_parameters), expected_bytes);
+                const auto merged_result = runAggregateWithChunks(spec.function_name, spec.aggregate_parameters, chunks, rng);
+                expectFinalizersEqual(spec.kind, direct_result, merged_result);
+            }
+        }
+    }
 }
 
 TEST(TimeSeriesStatisticalExtensionsAggregate, LaggedRegressionExactAndShuffled)

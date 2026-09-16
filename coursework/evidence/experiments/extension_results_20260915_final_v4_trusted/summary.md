@@ -1,7 +1,7 @@
 # Extension experiment summary
 
 - Seed: `20260915`; repetitions: `120`; observations per simulation: `240`.
-- Runtime: `4.042` seconds.
+- Runtime: `4.171` seconds.
 - Core calculations use only Python standard library plus the independent coursework oracle.
 - ADF and KPSS entries report statistic direction/behavior only; they make no p-value or calibrated rejection claim.
 

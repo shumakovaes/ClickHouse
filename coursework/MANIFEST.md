@@ -21,7 +21,7 @@ Generated evidence is included as data and plots; no compiled artifacts are incl
 | `reference/python/README.md`, `reference.py`, `test_reference.py` | Independent baseline reference implementation and tests |
 | `reference/python/extensions.py`, `test_extensions.py` | Independent batch oracle and tests for all four statistical extensions; not native evidence |
 | `evidence/experiments/` | Reproducible experiment scripts, tests, and generated CSV/Markdown/PNG/JSON outputs |
-| `evidence/experiments/run_extension_experiments.py` and `extension_results_20260915_final_v3_trusted/` | Seeded extension experiments and provenance-complete LF-normalized CSV/Markdown/JSON/hash outputs |
+| `evidence/experiments/run_extension_experiments.py` and `extension_results_20260915_final_v4_trusted/` | Seeded extension experiments and provenance-complete LF-normalized CSV/Markdown/JSON/hash outputs |
 | `evidence/benchmarks/` | Reproducible benchmark script and generated CSV/Markdown/JSON outputs |
 | `evidence/benchmarks/benchmark_extensions.py` and `extensions-20260915/{results.csv,results.json,summary.md}` | Bounded Python-oracle benchmark and recorded outputs for the four extensions; not ClickHouse throughput evidence |
 | `evidence/native-benchmark/` | Native ClickHouse harness, raw TSV measurements, metadata, and measured summary |

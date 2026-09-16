@@ -261,7 +261,7 @@ The earlier three-diagnostic revision has archived focused Debug evidence. Those
 
 ## 11. Extension experiment: independent Python evidence
 
-The extension experiment uses seed `20260915`, `n=240`, 120 repetitions, fixed ADF lag 1, and `min_segment=20`. Its final provenance-complete LF-normalized run took 4.041587 seconds under Python 3.12.6 on Windows. The recorded tables contain 360 AR-fit rows, 240 ADF rows, 480 KPSS rows, 120 mean-shift rows, 12 edge outcomes, and one optional-library cross-check row. Calculations use the independent coursework batch oracle; optional statsmodels was available only as a cross-check. These results are statistical/reference evidence, not execution of the C++ aggregates.
+The extension experiment uses seed `20260915`, `n=240`, 120 repetitions, fixed ADF lag 1, and `min_segment=20`. Its final provenance-complete LF-normalized run took 4.170579 seconds under Python 3.12.6 on Windows. The recorded tables contain 360 AR-fit rows, 240 ADF rows, 480 KPSS rows, 120 mean-shift rows, 12 edge outcomes, and one optional-library cross-check row. Calculations use the independent coursework batch oracle; optional statsmodels was available only as a cross-check. These results are statistical/reference evidence, not execution of the C++ aggregates.
 
 | Experiment | Verified result |
 |---|---:|
@@ -324,7 +324,7 @@ py -3 ../evidence/benchmarks/benchmark_extensions.py `
   --min-segment 8 --warmup 1 --repetitions 3
 ```
 
-The checked-in experiment evidence is under `evidence/experiments/extension_results_20260915_final_v3_trusted/`; the Python and native benchmark evidence paths are recorded separately. Native acceptance must record the exact revision, submodule state, Release configuration, toolchain, commands, exit codes, durations, test counts, resource use, and artifact hashes. Until those files exist, every native acceptance entry in Section 10 remains `PENDING`.
+The checked-in experiment evidence is under `evidence/experiments/extension_results_20260915_final_v4_trusted/`; the Python and native benchmark evidence paths are recorded separately. Native acceptance must record the exact revision, submodule state, Release configuration, toolchain, commands, exit codes, durations, test counts, resource use, and artifact hashes. Until those files exist, every native acceptance entry in Section 10 remains `PENDING`.
 
 ## 15. Conclusion
 

@@ -964,7 +964,8 @@ FunctionDocumentation extensionDocumentation(
     const String & description,
     const String & syntax,
     const FunctionDocumentation::Parameters & parameters,
-    const FunctionDocumentation::ReturnedValue & returned_value)
+    const FunctionDocumentation::ReturnedValue & returned_value,
+    const FunctionDocumentation::Examples & examples)
 {
     const FunctionDocumentation::Arguments arguments = {
         {"timestamp",
@@ -974,7 +975,8 @@ FunctionDocumentation extensionDocumentation(
          "Finite native numeric time-series value. Rows with NULL in either argument are skipped by the Null combinator.",
          {"(U)Int*", "Float*"}},
     };
-    return {description, syntax, arguments, parameters, returned_value, {}, {26, 9}, FunctionDocumentation::Category::AggregateFunction};
+    return {
+        description, syntax, arguments, parameters, returned_value, examples, {26, 9}, FunctionDocumentation::Category::AggregateFunction};
 }
 
 }
@@ -995,7 +997,20 @@ This function is in private preview. Enable it with `enable_time_series_aggregat
              {{"order", "Positive number of consecutive positional lags, from 1 through 16.", {"UInt64"}},
               {"max_samples", "Positive keyed-state cap; default 1000000.", {"UInt64"}}},
              {"Returns `(intercept, coefficients)` with coefficients in lag order 1 through order.",
-              {"Tuple(intercept Float64, coefficients Array(Float64))"}})});
+              {"Tuple(intercept Float64, coefficients Array(Float64))"}},
+             {{"Fit a lag-one autoregression",
+               R"(
+SET enable_time_series_aggregate_functions = 1;
+SELECT
+    round(result.intercept, 6) AS intercept,
+    arrayMap(coefficient -> round(coefficient, 6), result.coefficients) AS coefficients
+FROM
+(
+    SELECT timeSeriesLaggedLinearRegression(1)(timestamp, value) AS result
+    FROM values('timestamp UInt64, value Float64', (4, 31.), (0, 1.), (3, 15.), (1, 3.), (2, 7.))
+);
+               )",
+               "1\t[2]"}})});
 
     factory.registerFunction(
         "timeSeriesADFStatistic",
@@ -1012,7 +1027,21 @@ This function is in private preview. Enable it with `enable_time_series_aggregat
               {"max_samples", "Positive keyed-state cap; default 1000000.", {"UInt64"}}},
              {"Returns `(statistic, coefficient, observations)`, where observations is the number of usable post-lag regression rows; no "
               "p-value is estimated.",
-              {"Tuple(statistic Float64, coefficient Float64, observations UInt64)"}})});
+              {"Tuple(statistic Float64, coefficient Float64, observations UInt64)"}},
+             {{"Compute a fixed-lag ADF statistic",
+               R"(
+SET enable_time_series_aggregate_functions = 1;
+SELECT
+    round(result.statistic, 6) AS statistic,
+    round(result.coefficient, 6) AS coefficient,
+    result.observations
+FROM
+(
+    SELECT timeSeriesADFStatistic(0, 'constant')(timestamp, value) AS result
+    FROM values('timestamp UInt64, value Float64', (5, 4.), (0, 1.), (3, 3.), (1, 2.), (4, 2.), (2, 1.))
+);
+               )",
+               "-1.562771\t-1.214286\t5"}})});
 
     factory.registerFunction(
         "timeSeriesKPSSTest",
@@ -1028,7 +1057,21 @@ This function is in private preview. Enable it with `enable_time_series_aggregat
               {"bandwidth", "Optional non-negative Bartlett bandwidth.", {"UInt64"}},
               {"max_samples", "Positive keyed-state cap; default 1000000.", {"UInt64"}}},
              {"Returns `(statistic, bandwidth, observations)`; no p-value is estimated.",
-              {"Tuple(statistic Float64, bandwidth UInt64, observations UInt64)"}})});
+              {"Tuple(statistic Float64, bandwidth UInt64, observations UInt64)"}},
+             {{"Run a level KPSS test",
+               R"(
+SET enable_time_series_aggregate_functions = 1;
+SELECT
+    round(result.statistic, 6) AS statistic,
+    result.bandwidth,
+    result.observations
+FROM
+(
+    SELECT timeSeriesKPSSTest('level', 0)(timestamp, value) AS result
+    FROM values('timestamp UInt64, value Float64', (3, 1.), (0, 0.), (2, 1.), (1, 0.))
+);
+               )",
+               "0.375\t0\t4"}})});
 
     factory.registerFunction(
         "timeSeriesMeanShiftChangePoint",
@@ -1043,7 +1086,23 @@ This function is in private preview. Enable it with `enable_time_series_aggregat
              {{"min_segment", "Positive minimum sample count on each side of the split.", {"UInt64"}},
               {"max_samples", "Positive keyed-state cap; default 1000000.", {"UInt64"}}},
              {"Returns `(split_index, score, mean_before, mean_after, sse)`.",
-              {"Tuple(split_index UInt64, score Float64, mean_before Float64, mean_after Float64, sse Float64)"}})});
+              {"Tuple(split_index UInt64, score Float64, mean_before Float64, mean_after Float64, sse Float64)"}},
+             {{"Find a mean-shift change point",
+               R"(
+SET enable_time_series_aggregate_functions = 1;
+SELECT
+    result.split_index,
+    round(result.score, 6) AS score,
+    round(result.mean_before, 6) AS mean_before,
+    round(result.mean_after, 6) AS mean_after,
+    round(result.sse, 6) AS sse
+FROM
+(
+    SELECT timeSeriesMeanShiftChangePoint(1)(timestamp, value) AS result
+    FROM values('timestamp UInt64, value Float64', (5, 10.), (0, 0.), (3, 10.), (1, 0.), (4, 10.), (2, 0.))
+);
+               )",
+               "3\t1\t0\t10\t0"}})});
 }
 
 }

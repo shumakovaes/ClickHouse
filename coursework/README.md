@@ -54,7 +54,7 @@ rather than copied into this bundle:
 Independent evidence and reproduction artifacts are:
 
 * `reference/python/extensions.py` and `reference/python/test_extensions.py` — independent batch oracles and tests for the four statistical contracts.
-* `evidence/experiments/run_extension_experiments.py` — seeded AR, ADF, KPSS, and mean-shift experiment runner; the final provenance-complete LF-normalized output is under `evidence/experiments/extension_results_20260915_final_v3_trusted/`.
+* `evidence/experiments/run_extension_experiments.py` — seeded AR, ADF, KPSS, and mean-shift experiment runner; the final provenance-complete LF-normalized output is under `evidence/experiments/extension_results_20260915_final_v4_trusted/`.
 * `evidence/benchmarks/benchmark_extensions.py` — bounded Python-oracle benchmark; `evidence/benchmarks/extensions-20260915/{results.csv,results.json,summary.md}` are the recorded outputs.
 * `build/run_extension_benchmark.sh` — native benchmark harness, requiring an explicitly supplied Release `clickhouse` binary; no native benchmark result is claimed by this bundle.
 * `manuscript/report.md`, `manuscript/report.tex`, and `manuscript/report.pdf` — report source and rendered submission covering the seven APIs and the pending native acceptance ledger.

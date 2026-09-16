@@ -15,7 +15,7 @@ correctly. The four extension implementations and registration are at
 and `src/AggregateFunctions/registerAggregateFunctions.cpp`; their focused
 native tests are at
 `src/AggregateFunctions/tests/gtest_time_series_statistical_extensions.cpp`.
-That source currently defines 22 extension cases; execution and acceptance
+That source currently defines 23 extension cases; execution and acceptance
 remain pending.
 
 This file is the decision gate for the next four research directions. A method
