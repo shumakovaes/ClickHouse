@@ -266,13 +266,13 @@ The extension benchmark times independent batch-oracle finalizers on Windows/Pyt
 \toprule
 Python oracle finalizer & Configuration at $n=4096$ & Median ms & Peak bytes \\
 \midrule
-Lagged regression & $p=1$ & 167.348 & 716,160 \\
-Lagged regression & $p=8$ & 305.731 & 850,248 \\
-ADF & $p=0$, constant & 214.918 & 847,840 \\
-ADF & $p=4$, constant & 380.251 & 981,260 \\
-KPSS & trend, $q=0$ & 62.994 & 625,260 \\
-KPSS & trend, $q=32$ & 419.694 & 625,260 \\
-Mean shift & \texttt{min\_segment=8} & 18,541.648 & 359,088 \\
+Lagged regression & $p=1$ & 62.911 & 716,160 \\
+Lagged regression & $p=8$ & 123.553 & 850,304 \\
+ADF & $p=0$, constant & 78.213 & 847,840 \\
+ADF & $p=4$, constant & 130.798 & 981,260 \\
+KPSS & trend, $q=0$ & 22.253 & 625,260 \\
+KPSS & trend, $q=32$ & 402.003 & 625,260 \\
+Mean shift & \texttt{min\_segment=8} & 5,824.721 & 359,088 \\
 \bottomrule
 \end{tabularx}
 

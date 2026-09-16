@@ -285,13 +285,13 @@ Selected largest-case medians are:
 
 | Python oracle finalizer | Configuration at n=4096 | Median time | Median traced peak |
 |---|---|---:|---:|
-| lagged regression | p=1 | 167.348 ms | 716,160 bytes |
-| lagged regression | p=8 | 305.731 ms | 850,248 bytes |
-| ADF | p=0, constant | 214.918 ms | 847,840 bytes |
-| ADF | p=4, constant | 380.251 ms | 981,260 bytes |
-| KPSS | trend, q=0 | 62.994 ms | 625,260 bytes |
-| KPSS | trend, q=32 | 419.694 ms | 625,260 bytes |
-| mean shift | min_segment=8 | 18,541.648 ms | 359,088 bytes |
+| lagged regression | p=1 | 62.911 ms | 716,160 bytes |
+| lagged regression | p=8 | 123.553 ms | 850,304 bytes |
+| ADF | p=0, constant | 78.213 ms | 847,840 bytes |
+| ADF | p=4, constant | 130.798 ms | 981,260 bytes |
+| KPSS | trend, q=0 | 22.253 ms | 625,260 bytes |
+| KPSS | trend, q=32 | 402.003 ms | 625,260 bytes |
+| mean shift | min_segment=8 | 5,824.721 ms | 359,088 bytes |
 
 The benchmark spans `n={256,1024,4096}`, AR orders `{1,4,8}`, ADF lags `{0,2,4}`, and KPSS bandwidths `{0,8,32}`. Its only defensible interpretation is algorithmic behavior of the independent Python oracle on one host. It provides no ClickHouse throughput, query-plan, vectorization, RSS, serialization-size, or Release-build claim.
 
