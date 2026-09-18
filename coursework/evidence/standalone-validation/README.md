@@ -55,6 +55,13 @@ Covered: ACF, Ljung-Box, Durbin-Watson, AR(1), KPSS, random merge trees, key val
 Exit status: `0`. No AddressSanitizer or UndefinedBehaviorSanitizer finding
 was emitted, and leak detection was enabled.
 
+## Revalidation during the report update
+
+On 2026-09-18 both builds were repeated against the source file with the same
+SHA-256 shown above. The optimized run and the ASan/UBSan run again reported
+`PASS: 1764 checks` with the same coverage line; the sanitizer run emitted no
+finding. The temporary binaries were not retained.
+
 These runs cover the comparison prototype's ACF, Ljung--Box, Durbin--Watson,
 AR(1), and KPSS calculations, randomized merge trees, key validation,
 duplicate/gap checks, and serialization round-trips. The production keyed

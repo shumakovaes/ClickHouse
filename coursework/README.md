@@ -37,11 +37,12 @@ All seven APIs store `(timestamp, Float64 value)` samples and canonicalize by ti
 | `evidence/state-merge-benchmark-20260916-1ad279671/` | Direct, serialized-state, and merge/finalization measurements: 123, 192, and 96 rows respectively. |
 | `evidence/debug-gtest-20260916-1ad279671/` | Exact Debug focused run: 38/38 tests passed. |
 | `evidence/docs-examples-20260916-1ad279671/` | Generated-documentation example runner: all seven selected examples passed. |
-| `evidence/pdf-build-20260916-30ed69c7b-v7/` | Final technical report build: LaTeX/BibTeX logs, warning scan, toolchain record, and SHA-256. |
+| `evidence/pdf-build-20260916-30ed69c7b-v7/` | Archived 11-page technical-report build: LaTeX/BibTeX logs, warning scan, toolchain record, and SHA-256. |
 | [evidence/standalone-validation](evidence/standalone-validation/) | Exact optimized and ASan/UBSan run record for the quarantined standalone comparison. |
 | [evidence/trusted-reference](evidence/trusted-reference/) | Isolated NumPy/SciPy/statsmodels reference-suite validation record. |
 | [research](research/) | Design, ordering, mergeability, implementation, inventory, and citation notes. |
-| [manuscript](manuscript/) | Coursework report source and generated PDF. |
+| [research/COMPACT_STATE_CLOSURE_PROPOSITION.md](research/COMPACT_STATE_CLOSURE_PROPOSITION.md) | Formal compact-state closure result, counterexample, and adjacent-range contract. |
+| [manuscript](manuscript/) | Current HSE coursework report in Markdown, editable DOCX, final PDF, and SHA-256 manifest; the older TeX source is retained only as legacy provenance. |
 | [comparison/standalone_cpp](comparison/standalone_cpp/) | Dependency-free comparison prototype, explicitly outside the native API. |
 | [build](build/) | WSL setup helper, isolated native-validation runner, and build notes. |
 
@@ -65,7 +66,8 @@ Independent evidence and reproduction artifacts are:
 * `evidence/benchmarks/benchmark_extensions.py` — bounded Python-oracle benchmark; `evidence/benchmarks/extensions-20260916-final/{results.csv,results.json,summary.md}` contains 90 fresh timed samples.
 * `evidence/experiments/run_baseline_sensitivity_experiments.py` — fixed-seed ACF/Ljung--Box sensitivity runner; `evidence/experiments/baseline_sensitivity_20260916_final/` contains 12,000 ACF and 1,800 Ljung--Box raw rows plus summaries and hashes.
 * `build/run_extension_native_acceptance.sh`, `build/run_extension_benchmark.sh`, and `build/run_extension_state_merge_benchmark.sh` — the executed Release acceptance and benchmark harnesses; each evidence directory retains the exact runner copy and checksum.
-* `manuscript/report.md`, `manuscript/report.tex`, and `manuscript/report.pdf` — report source and visually inspected 11-page submission covering the seven APIs and the completed local acceptance ledger.
+* `manuscript/report.md`, `manuscript/report.docx`, `manuscript/report.pdf`, and `manuscript/SHA256SUMS` — source, editable document, visually inspected 34-page HSE submission, and integrity hashes covering all seven APIs and the completed local acceptance ledger.
+* `manuscript/report.tex` — legacy source of the archived 11-page technical report; it is not the source of the current HSE submission.
 
 ## Reproduction and validation status
 
@@ -96,12 +98,8 @@ binary at revision `1ad279671de9cdda088fb64046d6ae1d4e7f854f` independently
 passed the same **38/38** tests. The Release benchmark recorded **92** timing
 rows; the supplemental run recorded **123** direct, **192** state-size, and
 **96** merge rows. All seven generated pages passed generator drift checks and
-their embedded examples passed **7/7**. Draft PR
-[`#1`](https://github.com/shumakovaes/ClickHouse/pull/1) is mergeable and clean,
-but required remote CI remains **BLOCKED**, not passed: the inherited PR
-workflow admits only `master` as its base, whereas this PR correctly targets
-`coursework/mergeable-time-series-statistics`, and the fork has zero registered
-self-hosted runners. Local results are not represented as remote CI.
+their embedded examples passed **7/7**. These acceptance claims are tied to the
+retained local evidence, exact commands, revisions, and binary identities.
 
 The native source is intended for integration under `src/AggregateFunctions/TimeSeries`; the checkout used to prepare this package already contains that implementation and its factory-registration change. The standalone comparison code is not a substitute for native validation and is quarantined under `comparison/` for that reason.
 

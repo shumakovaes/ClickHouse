@@ -31,13 +31,15 @@ Generated evidence is included as data and plots; no compiled artifacts are incl
 | `evidence/state-merge-benchmark-20260916-1ad279671/` | 123 direct, 192 serialized-state, and 96 state-merge/finalization measurements with exact runner and hashes |
 | `evidence/debug-gtest-20260916-1ad279671/` | Current Debug 38/38 focused gtest log, metadata, and hashes |
 | `evidence/docs-examples-20260916-1ad279671/` | Seven generated documentation examples, all passing, plus focused reports and server logs |
-| `evidence/pdf-build-20260916-30ed69c7b-v7/` | Final 11-page technical PDF build logs, warning scan, TeX toolchain identity, and SHA-256 records |
+| `evidence/pdf-build-20260916-30ed69c7b-v7/` | Archived 11-page technical PDF build logs, warning scan, TeX toolchain identity, and SHA-256 records |
 | `evidence/native-benchmark/` | Native ClickHouse harness, raw TSV measurements, metadata, and measured summary |
 | `evidence/native-validation/` | Compact native build/runtime environment, checksums, SQL test output, gtest output, and smoke row |
 | `evidence/standalone-validation/README.md` | Exact optimized and ASan/UBSan validation record for the quarantined standalone comparison |
 | `evidence/trusted-reference/README.md` | Isolated NumPy/SciPy/statsmodels reference-suite validation record |
 | `research/` | Design/research/citation documents |
-| `manuscript/report.md`, `report.tex`, `report.pdf` | Coursework report sources and visually inspected 11-page submission PDF covering all seven APIs and the completed local acceptance ledger |
+| `research/COMPACT_STATE_CLOSURE_PROPOSITION.md` | Formal non-closure proposition for arbitrary compact-state merges, counterexample, and constructive adjacent-range contract |
+| `manuscript/report.md`, `report.docx`, `report.pdf`, `SHA256SUMS` | Current HSE coursework report source, editable document, visually inspected 34-page final PDF, and integrity hashes covering all seven APIs and the completed local acceptance ledger |
+| `manuscript/report.tex` | Legacy source of the archived 11-page technical report; retained for historical provenance and not used to build the current HSE submission |
 | `manuscript/.gitignore` | Excludes LaTeX intermediate files while retaining the PDF |
 | `comparison/standalone_cpp/` | Clearly quarantined non-native comparison prototype (source only) |
 | `build/setup_wsl.sh`, `build/run_native_validation.sh`, `build/run_extension_native_acceptance.sh`, `build/run_extension_benchmark.sh`, `build/run_extension_state_merge_benchmark.sh`, `build/README.md` | Native build helpers, isolated acceptance runner, and two Release benchmark harnesses; all require explicit source/build provenance |
