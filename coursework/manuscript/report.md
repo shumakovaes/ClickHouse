@@ -75,6 +75,8 @@ ClickHouse предоставляет мощный интерфейс польз
 
 Результат может использоваться как основа для экспериментального анализа временных рядов непосредственно в ClickHouse, без выгрузки каждой группы в отдельное приложение. Состояние поддерживает partial aggregation, `-State`/`-Merge`, шардовую агрегацию и `AggregatingMergeTree`. Параметры cap и work budget превращают неконтролируемый расход памяти и времени в явные проверяемые условия. Набор evidence-пакетов и воспроизводимых команд позволяет использовать работу в учебном проекте по системному программированию, численным методам и базам данных.
 
+Исходный код реализации, тесты и материалы воспроизводимой проверки опубликованы в репозитории курсового проекта: https://github.com/shumakovaes/ClickHouse/tree/coursework/time-series-extensions/coursework (дата обращения: 18.09.2026).
+
 ### Структура работы
 
 В первой главе формализуются задача и входной контракт. Во второй рассматривается архитектура объединяемого состояния, приводится доказательство корректности и обосновываются ограничения компактного состояния. В третьей описываются четыре API и соответствующие статистические алгоритмы. Четвёртая глава посвящена реализации на C++, сериализации и численной устойчивости. В пятой представлены результаты тестирования, независимых экспериментов и оценки производительности. Далее приведены заключение, список источников и приложения.
@@ -294,8 +296,6 @@ Native finalizer сначала range-scales values, затем поддержи
 Extension state и factory находятся в `src/AggregateFunctions/TimeSeries/AggregateFunctionTimeSeriesStatisticalExtensions.h/.cpp`; глобальная registration call добавлена в `src/AggregateFunctions/registerAggregateFunctions.cpp`. Для функций базового этапа используются соседние файлы `AggregateFunctionTimeSeriesDiagnostics.h/.cpp`, а их native-тесты находятся в `gtest_time_series_diagnostics.cpp`. Тесты четырёх новых расширений находятся в `src/AggregateFunctions/tests/gtest_time_series_statistical_extensions.cpp`.
 
 В coursework-пакете исходники extension намеренно не дублируются: authoritative production changes находятся в checkout `src` и `tests`, а пакет содержит research, копию baseline implementation и evidence. Это важно учитывать при описании результата: package является evidence bundle, а не вторым source tree.
-
-Полный исходный код и материалы воспроизводимой проверки доступны в репозитории проекта: https://github.com/shumakovaes/ClickHouse/tree/coursework/time-series-extensions/coursework (дата обращения: 18.09.2026).
 
 ### 4.2 Жизненный цикл состояния агрегата
 
